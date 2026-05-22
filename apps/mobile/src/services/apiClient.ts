@@ -1,4 +1,25 @@
-export const API_BASE_URL = 'http://localhost:4000/v1';
+import { NativeModules } from 'react-native';
+
+const FALLBACK_LAN_HOST = '172.17.6.39';
+const API_PORT = 4000;
+
+function isPrivateHost(host: string) {
+  return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+}
+
+function getMetroHost() {
+  const sourceCode = NativeModules.SourceCode as { scriptURL?: string } | undefined;
+  const scriptURL = sourceCode?.scriptURL;
+  const host = typeof scriptURL === 'string' ? scriptURL.match(/^[^:]+:\/\/([^:/]+)/)?.[1] : undefined;
+
+  if (host && isPrivateHost(host)) {
+    return host;
+  }
+
+  return FALLBACK_LAN_HOST;
+}
+
+export const API_BASE_URL = `http://${getMetroHost()}:${API_PORT}/v1`;
 export const API_KEY_REQUIRED = '서버 API 키 설정 필요';
 
 export type ApiKeySlotId = 'kamis' | 'foodNutritionDb' | 'consumerProductPrice';
@@ -46,6 +67,7 @@ export type ExternalApiEndpoint = {
   label: string;
   url: string;
   keySlotId: ApiKeySlotId;
+  apiKeyConfigured?: boolean;
 };
 
 export type PublicDataSource = {

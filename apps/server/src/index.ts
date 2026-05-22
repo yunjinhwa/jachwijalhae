@@ -32,6 +32,6 @@ app.use((req, res) => {
   });
 });
 
-app.listen(env.port, () => {
-  console.log(`jachwi-server listening on http://localhost:${env.port}${API_BASE_PATH}`);
+app.listen(env.port, env.host, () => {
+  console.log(`jachwi-server listening on http://${env.host}:${env.port}${API_BASE_PATH}`);
 });

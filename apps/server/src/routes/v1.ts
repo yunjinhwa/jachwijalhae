@@ -253,6 +253,14 @@ v1Router.patch('/shopping-list/items/:id', (req, res) => {
   sendOk(req, res, item);
 });
 
+v1Router.delete('/shopping-list/items/:id', (req, res) => {
+  const index = shoppingItems.findIndex((entry) => entry.id === req.params.id);
+  if (index < 0) return sendNotFound(res, '장보기 품목을 찾을 수 없습니다.');
+
+  const [deletedItem] = shoppingItems.splice(index, 1);
+  sendOk(req, res, deletedItem);
+});
+
 v1Router.get('/shopping-list/budget', (req, res) => {
   const total = shoppingItems.reduce((sum, item) => sum + item.expectedPrice * item.quantity, 0);
 

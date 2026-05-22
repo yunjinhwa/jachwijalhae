@@ -2,9 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Card, DataNotice, InfoRow, SectionTitle } from '../components/ui';
-import { sourceCsvFiles } from '../data/fileDataSeeds';
 import { useApiResource } from '../hooks/useApiResource';
-import { API_KEY_REQUIRED, publicDataSources } from '../services/apiClient';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
@@ -14,7 +12,7 @@ const MENU = [
   { label: '지역/예산 설정', route: 'Setup' },
   { label: '구매 이력', route: 'PurchaseHistory' },
   { label: '알림 이력', route: 'AlertHistory' },
-  { label: '설정/데이터 출처', route: 'Settings' },
+  { label: '앱 설정', route: 'Settings' },
 ];
 
 export function MyPageScreen({ navigation }: any) {
@@ -47,31 +45,6 @@ export function MyPageScreen({ navigation }: any) {
         ))}
       </View>
 
-      <Card>
-        <SectionTitle title="데이터 출처" />
-        {publicDataSources.map((source) => (
-          <View key={source.name} style={styles.sourceRow}>
-            <Text style={styles.sourceName}>{source.name}</Text>
-            <Text style={styles.sourceEndpoint} numberOfLines={1}>
-              {source.endpoints[0].url}
-            </Text>
-            <Text style={[styles.sourceStatus, styles.sourceStatusRequired]}>{API_KEY_REQUIRED}</Text>
-          </View>
-        ))}
-      </Card>
-
-      <Card>
-        <SectionTitle title="로컬 CSV 파일" />
-        {sourceCsvFiles.map((file) => (
-          <View key={file.id} style={styles.sourceRow}>
-            <Text style={styles.sourceName}>{file.name}</Text>
-            <Text style={styles.sourceEndpoint} numberOfLines={1}>
-              {file.rowCount.toLocaleString('ko-KR')}행 · 기준일 {file.latestDate}
-            </Text>
-          </View>
-        ))}
-      </Card>
-
       <DataNotice source="정확한 주소나 실시간 위치는 MVP 범위에서 수집하지 않습니다." />
     </ScreenLayout>
   );
@@ -102,26 +75,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 24,
   },
-  sourceRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 10,
-    gap: 4,
-  },
-  sourceName: {
-    color: colors.primary,
-    fontSize: typography.body,
-    fontWeight: '800',
-  },
-  sourceStatus: {
-    fontSize: typography.caption,
-    fontWeight: '800',
-  },
   sourceStatusRequired: {
     color: colors.danger,
-  },
-  sourceEndpoint: {
-    color: colors.textMuted,
-    fontSize: typography.caption,
   },
 });

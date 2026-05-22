@@ -14,29 +14,16 @@ type PlaceholderScreenProps = {
 
 export function PlaceholderScreen({
   title,
-  routePath,
-  api = '-',
   state = '-',
   notes = [],
   navigation,
 }: PlaceholderScreenProps) {
   return (
-    <ScreenLayout title={title} description={routePath}>
+    <ScreenLayout title={title}>
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>개발 기준</Text>
-
+        <Text style={styles.sectionTitle}>화면 상태</Text>
         <View style={styles.row}>
-          <Text style={styles.label}>route</Text>
-          <Text style={styles.value}>{routePath}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>api</Text>
-          <Text style={styles.value}>{api}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>state</Text>
+          <Text style={styles.label}>상태</Text>
           <Text style={styles.value}>{state}</Text>
         </View>
       </View>

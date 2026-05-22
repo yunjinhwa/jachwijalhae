@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Button, Card, DataNotice, EmptyState, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
@@ -11,6 +12,12 @@ import { formatWon } from '../utils/format';
 export function AlertsScreen({ navigation }: any) {
   const alertsResource = useApiResource(() => jachwiApi.getAlerts(), []);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      alertsResource.reload();
+    }, [alertsResource.reload]),
+  );
 
   useEffect(() => {
     if (alertsResource.data?.alerts) {
@@ -55,19 +62,19 @@ export function AlertsScreen({ navigation }: any) {
       ) : null}
 
       {alerts.map((alert) => (
-        <Pressable key={alert.id} style={styles.alertRow} onPress={() => navigation.navigate('AlertEdit', { id: alert.id })}>
-          <View style={styles.alertMain}>
+        <View key={alert.id} style={styles.alertRow}>
+          <Pressable style={styles.alertMain} onPress={() => navigation.navigate('AlertEdit', { id: alert.id })}>
             <Text style={styles.alertTitle}>{alert.name}</Text>
             <Text style={styles.alertMeta}>목표가 {formatWon(alert.targetPrice)} 이하</Text>
             {alert.reached ? <Text style={styles.reached}>목표가 도달</Text> : null}
-          </View>
+          </Pressable>
           <Pressable
             onPress={() => void toggleAlert(alert.id)}
             style={[styles.switch, alert.enabled && styles.switchOn]}
           >
             <View style={[styles.knob, alert.enabled && styles.knobOn]} />
           </Pressable>
-        </Pressable>
+        </View>
       ))}
 
       <View style={styles.actions}>
@@ -75,7 +82,7 @@ export function AlertsScreen({ navigation }: any) {
         <Button label="알림 이력" variant="secondary" onPress={() => navigation.navigate('AlertHistory')} />
       </View>
 
-      <DataNotice updatedAt="2026-05-21 09:00" source="가격 알림은 공공데이터 갱신 후 판단됩니다." requiresApiKey />
+      <DataNotice updatedAt="2026-05-21 09:00" source="가격 알림은 공공데이터 갱신 후 판단됩니다." />
     </ScreenLayout>
   );
 }

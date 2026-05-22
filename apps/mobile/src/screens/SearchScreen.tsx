@@ -2,12 +2,28 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Button, Card, Chip, EmptyState, PriceRow, SectionTitle } from '../components/ui';
+import { categories as fallbackCategories, priceItems } from '../data/mockData';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { colors, radius, typography } from '../theme/theme';
+import type { PriceItem } from '../types/domain';
 
 const RECENT_KEYWORDS = ['계란', '라면', '화장지', '우유'];
 const POPULAR_KEYWORDS = ['쌀', '대파', '세탁세제', '참치캔', '우유'];
+
+function searchLocalItems(query: string, categoryId: string): PriceItem[] {
+  const normalized = query.trim().toLowerCase();
+
+  return priceItems.filter((item) => {
+    const matchesKeyword =
+      !normalized ||
+      item.name.toLowerCase().includes(normalized) ||
+      item.keywords.some((keyword) => keyword.toLowerCase().includes(normalized));
+    const matchesCategory = categoryId === 'all' || item.categoryId === categoryId;
+
+    return matchesKeyword && matchesCategory;
+  });
+}
 
 export function SearchScreen({ navigation }: any) {
   const [keyword, setKeyword] = useState('');
@@ -27,8 +43,12 @@ export function SearchScreen({ navigation }: any) {
     [trimmedKeyword, selectedCategory],
   );
 
-  const categories = categoryResource.data?.categories ?? [];
-  const filteredItems = resultResource.data?.items ?? [];
+  const categories = categoryResource.data?.categories ?? fallbackCategories;
+  const localItems = useMemo(
+    () => searchLocalItems(trimmedKeyword, selectedCategory),
+    [trimmedKeyword, selectedCategory],
+  );
+  const filteredItems = resultResource.data?.items ?? localItems;
 
   const hasKeyword = trimmedKeyword.length > 0;
   const isEmpty = hasKeyword && filteredItems.length === 0;
@@ -116,7 +136,7 @@ export function SearchScreen({ navigation }: any) {
         />
       ) : null}
 
-      {resultResource.error ? (
+      {resultResource.error && filteredItems.length === 0 ? (
         <EmptyState
           title="검색 API 연결 실패"
           description={resultResource.error}

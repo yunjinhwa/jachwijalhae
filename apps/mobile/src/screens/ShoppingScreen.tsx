@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Button, Card, EmptyState, Metric, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
@@ -13,6 +14,12 @@ export function ShoppingScreen({ navigation }: any) {
   const budget = usePreferenceStore((state) => state.budget);
   const listResource = useApiResource(() => jachwiApi.getShoppingList(), []);
   const [items, setItems] = useState<ShoppingListItem[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      listResource.reload();
+    }, [listResource.reload]),
+  );
 
   useEffect(() => {
     if (listResource.data?.items) {
@@ -51,6 +58,26 @@ export function ShoppingScreen({ navigation }: any) {
     }
   };
 
+  const deleteItem = (id: string) => {
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+
+    Alert.alert('품목 삭제', `${current.name}을(를) 장보기 목록에서 삭제할까요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          setItems((prev) => prev.filter((item) => item.id !== id));
+          void jachwiApi.deleteShoppingItem(id).catch((error: unknown) => {
+            setItems((prev) => [...prev, current]);
+            Alert.alert('삭제 실패', error instanceof Error ? error.message : '서버 요청에 실패했습니다.');
+          });
+        },
+      },
+    ]);
+  };
+
   return (
     <ScreenLayout title="장보기 목록" eyebrow="GET /shopping-list" description="체크, 수정, 구매 완료까지 한 화면에서 처리합니다.">
       <View style={styles.metricRow}>
@@ -77,18 +104,23 @@ export function ShoppingScreen({ navigation }: any) {
 
       <SectionTitle title="담은 품목" />
       {items.map((item) => (
-        <Pressable key={item.id} style={styles.itemRow} onPress={() => void toggleItem(item.id)}>
-          <View style={[styles.checkBox, item.checked && styles.checkBoxOn]}>
+        <View key={item.id} style={styles.itemRow}>
+          <Pressable style={[styles.checkBox, item.checked && styles.checkBoxOn]} onPress={() => void toggleItem(item.id)}>
             <Text style={[styles.checkText, item.checked && styles.checkTextOn]}>{item.checked ? '✓' : ''}</Text>
-          </View>
+          </Pressable>
           <View style={styles.itemMain}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemMeta}>{item.quantity}개 · 예상 {formatWon(item.expectedPrice)}</Text>
           </View>
-          <Pressable onPress={() => navigation.navigate('ShoppingEdit', { id: item.id })}>
-            <Text style={styles.editText}>수정</Text>
-          </Pressable>
-        </Pressable>
+          <View style={styles.rowActions}>
+            <Pressable onPress={() => navigation.navigate('ShoppingEdit', { id: item.id })}>
+              <Text style={styles.editText}>수정</Text>
+            </Pressable>
+            <Pressable onPress={() => deleteItem(item.id)}>
+              <Text style={styles.deleteText}>삭제</Text>
+            </Pressable>
+          </View>
+        </View>
       ))}
 
       <View style={styles.actions}>
@@ -172,6 +204,15 @@ const styles = StyleSheet.create({
     color: colors.info,
     fontSize: typography.caption,
     fontWeight: '800',
+  },
+  deleteText: {
+    color: colors.danger,
+    fontSize: typography.caption,
+    fontWeight: '800',
+  },
+  rowActions: {
+    gap: 8,
+    alignItems: 'flex-end',
   },
   actions: {
     gap: 10,

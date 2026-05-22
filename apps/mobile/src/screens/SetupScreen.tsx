@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Button, Card, Chip, DataNotice, InfoRow } from '../components/ui';
+import { Button, Card, Chip, DataNotice } from '../components/ui';
+import { categories as fallbackCategories } from '../data/mockData';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
@@ -12,26 +13,63 @@ const REGION_OPTIONS = [
   { label: '서울 마포구', code: '11440' },
   { label: '대전 서구', code: '30170' },
 ];
+const KEYWORD_OPTIONS = ['계란', '쌀', '우유', '라면', '세제', '참치캔', '화장지', '대파'];
 
 export function SetupScreen({ navigation }: any) {
+  const storeRegion = usePreferenceStore((state) => state.region);
+  const storeRegionCode = usePreferenceStore((state) => state.regionCode);
+  const storeBudget = usePreferenceStore((state) => state.budget);
+  const storeCategories = usePreferenceStore((state) => state.categories);
   const setPreferences = usePreferenceStore((state) => state.setPreferences);
   const categoryResource = useApiResource(() => jachwiApi.getCategories(), []);
-  const [region, setRegion] = useState(REGION_OPTIONS[0]);
-  const [budgetText, setBudgetText] = useState('320000');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['생필품', '농산물']);
+  const userResource = useApiResource(() => jachwiApi.getUserMe(), []);
+  const [region, setRegion] = useState(
+    REGION_OPTIONS.find((option) => option.code === storeRegionCode) ?? {
+      label: storeRegion,
+      code: storeRegionCode,
+    },
+  );
+  const [budgetText, setBudgetText] = useState(String(storeBudget));
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    storeCategories.filter((item) => !KEYWORD_OPTIONS.includes(item)),
+  );
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>(
+    storeCategories.filter((item) => KEYWORD_OPTIONS.includes(item)),
+  );
   const [saving, setSaving] = useState(false);
 
   const budget = Number(budgetText.replace(/[^0-9]/g, ''));
-  const categories = categoryResource.data?.categories ?? [];
+  const categories = categoryResource.data?.categories ?? fallbackCategories;
+
+  useEffect(() => {
+    const preferences = userResource.data?.preferences;
+    if (!preferences) return;
+
+    setRegion(
+      REGION_OPTIONS.find((option) => option.code === preferences.regionCode) ?? {
+        label: preferences.region,
+        code: preferences.regionCode,
+      },
+    );
+    setBudgetText(String(preferences.budget));
+    setSelectedCategories(preferences.categories.filter((item) => !KEYWORD_OPTIONS.includes(item)));
+    setSelectedKeywords(preferences.categories.filter((item) => KEYWORD_OPTIONS.includes(item)));
+  }, [userResource.data]);
 
   const isValid = useMemo(
-    () => region.label.length > 0 && budget > 0 && selectedCategories.length > 0,
-    [region, budget, selectedCategories],
+    () => region.label.length > 0 && budget > 0 && (selectedCategories.length > 0 || selectedKeywords.length > 0),
+    [region, budget, selectedCategories, selectedKeywords],
   );
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
       prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category],
+    );
+  };
+
+  const toggleKeyword = (keyword: string) => {
+    setSelectedKeywords((prev) =>
+      prev.includes(keyword) ? prev.filter((item) => item !== keyword) : [...prev, keyword],
     );
   };
 
@@ -45,13 +83,13 @@ export function SetupScreen({ navigation }: any) {
       region: region.label,
       regionCode: region.code,
       budget,
-      categories: selectedCategories,
+      categories: [...selectedCategories, ...selectedKeywords],
     };
 
     try {
       setSaving(true);
-      await jachwiApi.savePreferences(payload);
       setPreferences(payload);
+      await jachwiApi.savePreferences(payload);
       navigation.replace('MainTabs');
     } catch (error) {
       Alert.alert('설정 저장 실패', error instanceof Error ? error.message : '서버 요청에 실패했습니다.');
@@ -78,7 +116,6 @@ export function SetupScreen({ navigation }: any) {
             />
           ))}
         </View>
-        <InfoRow label="regionCode" value={region.code} />
       </Card>
 
       <Card>
@@ -108,10 +145,24 @@ export function SetupScreen({ navigation }: any) {
         {categoryResource.error ? <Text style={styles.help}>{categoryResource.error}</Text> : null}
       </Card>
 
-      <DataNotice source="지역/예산/관심 카테고리만 수집합니다." />
+      <Card>
+        <Text style={styles.label}>관심 키워드</Text>
+        <View style={styles.wrap}>
+          {KEYWORD_OPTIONS.map((keyword) => (
+            <Chip
+              key={keyword}
+              label={keyword}
+              selected={selectedKeywords.includes(keyword)}
+              onPress={() => toggleKeyword(keyword)}
+            />
+          ))}
+        </View>
+      </Card>
+
+      <DataNotice source="지역/예산/관심 카테고리만 저장합니다." />
       <Button
         label={saving ? '저장 중' : '설정 완료'}
-        disabled={!isValid || saving || categoryResource.loading}
+        disabled={!isValid || saving}
         onPress={() => void handleSubmit()}
       />
     </ScreenLayout>

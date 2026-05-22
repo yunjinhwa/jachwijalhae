@@ -98,7 +98,7 @@ export function HomeScreen({ navigation }: any) {
         />
       ))}
 
-      <DataNotice updatedAt="2026-05-21 09:00" source="한국소비자원/KAMIS" requiresApiKey />
+      <DataNotice updatedAt="2026-05-21 09:00" source="한국소비자원/KAMIS" />
     </ScreenLayout>
   );
 }

@@ -1,7 +1,9 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 export type RootStackParamList = {
   Onboarding: undefined;
   Setup: undefined;
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<TabParamList> | undefined;
 
   PriceSummary: undefined;
   Recommendations: undefined;
@@ -26,7 +28,7 @@ export type RootStackParamList = {
   Alternatives: { itemId?: string } | undefined;
 
   CompareSelect: undefined;
-  CompareResult: undefined;
+  CompareResult: { ids?: string[] } | undefined;
   CompareRegions: { itemId?: string } | undefined;
   CompareStores: { itemId?: string } | undefined;
 

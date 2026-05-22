@@ -17,11 +17,14 @@ export function ScreenLayout({
   scroll = true,
   children,
 }: ScreenLayoutProps) {
+  const isApiLabel = eyebrow ? /\b(GET|POST|PATCH|PUT|DELETE)\b|\/[a-z]/i.test(eyebrow) : false;
+  const isRouteDescription = description?.trim().startsWith('/');
+
   const content = (
     <View style={styles.content}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      {eyebrow && !isApiLabel ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
       <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+      {description && !isRouteDescription ? <Text style={styles.description}>{description}</Text> : null}
       {children}
     </View>
   );

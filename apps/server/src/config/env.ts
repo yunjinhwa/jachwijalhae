@@ -4,6 +4,7 @@ export type ApiKeySlotId = 'kamis' | 'foodNutritionDb' | 'consumerProductPrice';
 
 export const env = {
   port: Number(process.env.PORT ?? 4000),
+  host: process.env.HOST ?? '0.0.0.0',
   nodeEnv: process.env.NODE_ENV ?? 'development',
   apiKeys: {
     kamis: process.env.KAMIS_API_KEY ?? '',

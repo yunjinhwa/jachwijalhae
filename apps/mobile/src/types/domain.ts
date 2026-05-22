@@ -57,3 +57,60 @@ export type PriceAlert = {
   enabled: boolean;
   reached: boolean;
 };
+
+export type PriceChangeItem = {
+  itemId: string;
+  name: string;
+  avgPrice: number;
+  changeRate7d: number;
+  decision: Decision;
+};
+
+export type AlternativeItem = {
+  from: string;
+  to: string;
+  priceGap: number;
+  savingRate: number;
+};
+
+export type PurchaseHistoryItem = {
+  id: string;
+  date: string;
+  total: number;
+  items: string[];
+};
+
+export type AlertHistoryItem = {
+  id: string;
+  title: string;
+  body: string;
+  read: boolean;
+};
+
+export type CsvSourceFile = {
+  id: string;
+  name: string;
+  path: string;
+  encoding: string;
+  rowCount: number;
+  latestDate: string;
+  columns: string[];
+};
+
+export type ApiDataSourceEndpoint = {
+  label: string;
+  url: string;
+  keySlotId: 'kamis' | 'foodNutritionDb' | 'consumerProductPrice';
+  apiKeyConfigured?: boolean;
+};
+
+export type ApiDataSource = {
+  name: string;
+  purpose: string;
+  endpoints: ApiDataSourceEndpoint[];
+};
+
+export type DataSourcesResponse = {
+  apiSources: ApiDataSource[];
+  fileSources: CsvSourceFile[];
+};

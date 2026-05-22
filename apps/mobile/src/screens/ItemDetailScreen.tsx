@@ -35,7 +35,7 @@ export function ItemDetailScreen({ route, navigation }: any) {
           </Card>
           <Button label="구매 판단 보기" onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })} />
           <Button label="가격 추이 보기" variant="secondary" onPress={() => navigation.navigate('PriceTrend', { itemId: item.id })} />
-          <DataNotice updatedAt={item.updatedAt} source={item.source} requiresApiKey />
+          <DataNotice updatedAt={item.updatedAt} source={item.source} />
         </>
       ) : null}
     </ScreenLayout>
