@@ -74,7 +74,7 @@ const MOCK_ITEMS = [
   },
 ];
 
-export function SearchScreen() {
+export function SearchScreen({ navigation }: any) {
   const [keyword, setKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('전체');
 
@@ -187,7 +187,11 @@ export function SearchScreen() {
             </View>
 
             {filteredItems.map((item) => (
-              <Pressable key={item.id} style={styles.resultItem}>
+              <Pressable
+                key={item.id}
+                style={styles.resultItem}
+                onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+                >
                 <View>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.itemMeta}>{item.category}</Text>

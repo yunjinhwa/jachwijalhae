@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { ItemDetailScreen } from '../screens/ItemDetailScreen';
 
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { SetupScreen } from '../screens/SetupScreen';
@@ -15,6 +16,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Setup: undefined;
   MainTabs: undefined;
+  ItemDetail: { itemId: string };
 };
 
 export type TabParamList = {
@@ -54,6 +56,7 @@ export function AppNavigator() {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Setup" component={SetupScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
+        <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
