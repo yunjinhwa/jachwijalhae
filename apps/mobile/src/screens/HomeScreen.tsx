@@ -1,259 +1,167 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { colors } from '../theme/theme';
+import { Button, Card, DataNotice, Metric, PriceRow, SectionTitle } from '../components/ui';
+import { useApiResource } from '../hooks/useApiResource';
+import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
+import { colors, radius, typography } from '../theme/theme';
+import { formatWon } from '../utils/format';
 
-const recommendations = [
-  {
-    id: 'egg',
-    name: '계란 30구',
-    price: 6200,
-    decision: '사기 좋음',
-    reason: '30일 평균보다 8% 낮아요',
-  },
-  {
-    id: 'rice',
-    name: '쌀 10kg',
-    price: 28900,
-    decision: '사기 좋음',
-    reason: '최근 가격이 안정적이에요',
-  },
-  {
-    id: 'milk',
-    name: '우유 1L',
-    price: 2450,
-    decision: '평균 수준',
-    reason: '최근 평균가와 비슷해요',
-  },
-];
-
-export function HomeScreen() {
+export function HomeScreen({ navigation }: any) {
   const region = usePreferenceStore((state) => state.region);
   const budget = usePreferenceStore((state) => state.budget);
   const categories = usePreferenceStore((state) => state.categories);
+  const home = useApiResource(() => jachwiApi.getHomeSummary(), []);
+  const waitRecommendations = useApiResource(() => jachwiApi.getRecommendations('WAIT'), []);
+  const summary = home.data?.summary ?? { downCount: 0, upCount: 0, stableCount: 0 };
+  const buyItems = home.data?.recommendations ?? [];
+  const waitItems = waitRecommendations.data?.itemList ?? [];
+  const unreadAlerts = home.data?.alerts.unreadCount ?? 0;
 
   return (
-    <ScreenLayout title="자취잘해" description={`${region || '지역 미설정'} 기준 생활물가`}>
-      <Pressable style={styles.searchBox}>
-        <Text style={styles.searchText}>⌕ 오늘 살 품목을 검색하세요</Text>
+    <ScreenLayout
+      title="홈"
+      eyebrow="GET /home/summary"
+      description={`${region} 기준 생활물가 요약`}
+    >
+      <Pressable style={styles.searchBox} onPress={() => navigation.navigate('SearchTab')}>
+        <Text style={styles.searchText}>계란, 라면, 세제 검색</Text>
+        <Text style={styles.searchAction}>검색</Text>
       </Pressable>
 
-      <View style={styles.profileCard}>
-        <Text style={styles.profileTitle}>내 장보기 설정</Text>
-        <Text style={styles.profileText}>
-          월 예산 {budget > 0 ? `${budget.toLocaleString()}원` : '미설정'}
-        </Text>
-        <Text style={styles.profileText}>
-          관심 카테고리 {categories.length > 0 ? categories.join(', ') : '미설정'}
-        </Text>
+      {home.error ? (
+        <Card>
+          <SectionTitle title="서버 연결 실패" />
+          <Text style={styles.muted}>{home.error}</Text>
+          <Button label="다시 불러오기" variant="secondary" onPress={home.reload} />
+        </Card>
+      ) : null}
+
+      <Card>
+        <SectionTitle title="내 장보기 기준" action={`${unreadAlerts}개 알림`} />
+        <View style={styles.profileGrid}>
+          <Metric label="월 예산" value={formatWon(budget)} />
+          <Metric label="관심 카테고리" value={`${categories.length}개`} />
+        </View>
+        <Text style={styles.muted}>{categories.join(', ')}</Text>
+      </Card>
+
+      <View style={styles.metricRow}>
+        <Metric label="하락" value={home.loading ? '-' : `${summary.downCount}개`} tone="success" />
+        <Metric label="상승" value={home.loading ? '-' : `${summary.upCount}개`} tone="danger" />
+        <Metric label="안정" value={home.loading ? '-' : `${summary.stableCount}개`} tone="info" />
       </View>
 
-      <View style={styles.summaryCard}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.sectionTitle}>이번 주 물가 요약</Text>
-          <Text style={styles.updatedAt}>갱신 09:00</Text>
-        </View>
-
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>12개</Text>
-            <Text style={styles.summaryLabel}>하락</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>7개</Text>
-            <Text style={styles.summaryLabel}>상승</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>21개</Text>
-            <Text style={styles.summaryLabel}>안정</Text>
-          </View>
-        </View>
+      <View style={styles.quickGrid}>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('PriceSummary')}>
+          <Text style={styles.quickTitle}>물가 요약</Text>
+          <Text style={styles.quickBody}>주간/월간 상승·하락 품목</Text>
+        </Pressable>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('Recommendations')}>
+          <Text style={styles.quickTitle}>추천 구매</Text>
+          <Text style={styles.quickBody}>BUY / WAIT / REPLACE</Text>
+        </Pressable>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('PriceChanges')}>
+          <Text style={styles.quickTitle}>가격 변동</Text>
+          <Text style={styles.quickBody}>변동률 높은 품목</Text>
+        </Pressable>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('RecentItems')}>
+          <Text style={styles.quickTitle}>최근 본 품목</Text>
+          <Text style={styles.quickBody}>다시 확인하기</Text>
+        </Pressable>
       </View>
 
-      <View style={styles.decisionRow}>
-        <View style={styles.decisionCard}>
-          <Text style={styles.decisionTitle}>사기 좋은 품목</Text>
-          <Text style={styles.decisionBody}>계란, 쌀, 대파</Text>
-        </View>
+      <SectionTitle title="지금 사기 좋은 품목" action="추천 기준" />
+      {buyItems.map((item) => (
+        <PriceRow
+          key={item.id}
+          name={item.name}
+          meta={item.reason}
+          price={item.avgPrice}
+          changeRate={item.changeRate7d}
+          decision={item.decision}
+          onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+        />
+      ))}
 
-        <View style={styles.decisionCard}>
-          <Text style={styles.decisionTitle}>기다릴 품목</Text>
-          <Text style={styles.decisionBody}>세제, 참치캔</Text>
-        </View>
-      </View>
+      <SectionTitle title="기다리면 좋은 품목" />
+      {waitItems.map((item) => (
+        <PriceRow
+          key={item.id}
+          name={item.name}
+          meta={item.reason}
+          price={item.avgPrice}
+          changeRate={item.changeRate7d}
+          decision={item.decision}
+          onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })}
+        />
+      ))}
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>추천 구매 품목</Text>
-
-        {recommendations.map((item) => (
-          <View key={item.id} style={styles.recommendItem}>
-            <View style={styles.recommendMain}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemReason}>{item.reason}</Text>
-            </View>
-
-            <View style={styles.recommendSide}>
-              <Text style={styles.itemPrice}>{item.price.toLocaleString()}원</Text>
-              <Text style={styles.badge}>{item.decision}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-
-      <Text style={styles.sourceText}>
-        가격 정보는 공공데이터 갱신 시점과 실제 판매가가 다를 수 있어요.
-      </Text>
+      <DataNotice updatedAt="2026-05-21 09:00" source="한국소비자원/KAMIS" requiresApiKey />
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
   searchBox: {
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    minHeight: 48,
+    borderRadius: radius.control,
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    marginBottom: 16,
   },
   searchText: {
-    fontSize: 15,
     color: colors.textMuted,
+    fontSize: typography.body,
   },
-  profileCard: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    marginBottom: 16,
-    gap: 6,
+  searchAction: {
+    color: colors.info,
+    fontSize: typography.caption,
+    fontWeight: '800',
   },
-  profileTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.background,
-    marginBottom: 2,
+  profileGrid: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  profileText: {
-    fontSize: 14,
-    color: colors.background,
+  muted: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
   },
-  summaryCard: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
+  metricRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 16,
   },
-  cardHeader: {
+  quickGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  updatedAt: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    marginTop: 16,
-    gap: 8,
-  },
-  summaryItem: {
-    flex: 1,
-    borderRadius: 14,
-    backgroundColor: colors.background,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  summaryLabel: {
-    marginTop: 4,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  decisionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  decisionCard: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-  },
-  decisionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  decisionBody: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    marginBottom: 12,
-    gap: 12,
-  },
-  recommendItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 12,
-  },
-  recommendMain: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  itemReason: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  recommendSide: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  itemPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  badge: {
-    fontSize: 11,
-    color: colors.background,
-    backgroundColor: colors.success,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  sourceText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 18,
+    flexWrap: 'wrap',
+    gap: 10,
     marginBottom: 24,
+  },
+  quickCard: {
+    width: '48.5%',
+    minHeight: 92,
+    borderRadius: radius.card,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  quickTitle: {
+    color: colors.primary,
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  quickBody: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    lineHeight: 18,
   },
 });
