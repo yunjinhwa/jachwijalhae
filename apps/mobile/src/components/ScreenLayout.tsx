@@ -1,21 +1,43 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, typography } from '../theme/theme';
 
 type ScreenLayoutProps = {
   title: string;
   description?: string;
+  eyebrow?: string;
+  scroll?: boolean;
   children?: React.ReactNode;
 };
 
-export function ScreenLayout({ title, description, children }: ScreenLayoutProps) {
+export function ScreenLayout({
+  title,
+  description,
+  eyebrow,
+  scroll = true,
+  children,
+}: ScreenLayoutProps) {
+  const isApiLabel = eyebrow ? /\b(GET|POST|PATCH|PUT|DELETE)\b|\/[a-z]/i.test(eyebrow) : false;
+  const isRouteDescription = description?.trim().startsWith('/');
+
+  const content = (
+    <View style={styles.content}>
+      {eyebrow && !isApiLabel ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      <Text style={styles.title}>{title}</Text>
+      {description && !isRouteDescription ? <Text style={styles.description}>{description}</Text> : null}
+      {children}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <Text style={styles.title}>{title}</Text>
-        {description ? <Text style={styles.description}>{description}</Text> : null}
-        {children}
-      </View>
+      {scroll ? (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {content}
+        </ScrollView>
+      ) : (
+        content
+      )}
     </SafeAreaView>
   );
 }
@@ -23,17 +45,27 @@ export function ScreenLayout({ title, description, children }: ScreenLayoutProps
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
-  container: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flexGrow: 1,
     paddingHorizontal: spacing.pageX,
-    paddingTop: 40,
-    backgroundColor: colors.background,
+    paddingTop: 28,
+    paddingBottom: 32,
+    backgroundColor: colors.surface,
+  },
+  eyebrow: {
+    fontSize: typography.caption,
+    fontWeight: '800',
+    color: colors.info,
+    marginBottom: 8,
   },
   title: {
-    fontSize: typography.display,
-    fontWeight: '700',
+    fontSize: typography.title,
+    fontWeight: '800',
     color: colors.primary,
     marginBottom: 8,
   },

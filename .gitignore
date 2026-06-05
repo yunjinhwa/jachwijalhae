@@ -2,6 +2,9 @@ node_modules
 .env
 .env.*
 .expo
+apps/mobile/.expo-run/
+.server-run/
+apps/server/.server-run/
 dist
 build
 coverage
