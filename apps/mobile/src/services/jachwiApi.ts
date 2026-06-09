@@ -2,6 +2,7 @@ import { API_BASE_URL } from './apiClient';
 import {
   AlertHistoryItem,
   AlternativeItem,
+  BudgetPeriod,
   Category,
   DataSourcesResponse,
   Decision,
@@ -201,6 +202,7 @@ export const jachwiApi = {
   getShoppingBudget: () =>
     request<{
       budget: number;
+      budgetPeriod: BudgetPeriod;
       total: number;
       remaining: number;
     }>('/shopping-list/budget'),
@@ -254,6 +256,7 @@ export const jachwiApi = {
         region: string;
         regionCode: string;
         budget: number;
+        budgetPeriod: BudgetPeriod;
         categories: string[];
       };
     }>('/users/me'),
@@ -262,6 +265,7 @@ export const jachwiApi = {
     region: string;
     regionCode: string;
     budget: number;
+    budgetPeriod?: BudgetPeriod;
     categories: string[];
   }) =>
     request<typeof payload>('/users/preferences', {

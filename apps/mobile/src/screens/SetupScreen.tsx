@@ -7,6 +7,7 @@ import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
+import type { BudgetPeriod } from '../types/domain';
 
 const REGION_OPTIONS = [
   { label: '부산 사상구', code: '26440' },
@@ -14,11 +15,16 @@ const REGION_OPTIONS = [
   { label: '대전 서구', code: '30170' },
 ];
 const KEYWORD_OPTIONS = ['계란', '쌀', '우유', '라면', '세제', '참치캔', '화장지', '대파'];
+const BUDGET_PERIOD_OPTIONS: Array<{ label: string; value: BudgetPeriod }> = [
+  { label: '주간', value: 'weekly' },
+  { label: '월간', value: 'monthly' },
+];
 
 export function SetupScreen({ navigation }: any) {
   const storeRegion = usePreferenceStore((state) => state.region);
   const storeRegionCode = usePreferenceStore((state) => state.regionCode);
   const storeBudget = usePreferenceStore((state) => state.budget);
+  const storeBudgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const storeCategories = usePreferenceStore((state) => state.categories);
   const setPreferences = usePreferenceStore((state) => state.setPreferences);
   const categoryResource = useApiResource(() => jachwiApi.getCategories(), []);
@@ -30,6 +36,7 @@ export function SetupScreen({ navigation }: any) {
     },
   );
   const [budgetText, setBudgetText] = useState(String(storeBudget));
+  const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>(storeBudgetPeriod);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     storeCategories.filter((item) => !KEYWORD_OPTIONS.includes(item)),
   );
@@ -52,6 +59,7 @@ export function SetupScreen({ navigation }: any) {
       },
     );
     setBudgetText(String(preferences.budget));
+    setBudgetPeriod(preferences.budgetPeriod ?? 'monthly');
     setSelectedCategories(preferences.categories.filter((item) => !KEYWORD_OPTIONS.includes(item)));
     setSelectedKeywords(preferences.categories.filter((item) => KEYWORD_OPTIONS.includes(item)));
   }, [userResource.data]);
@@ -83,6 +91,7 @@ export function SetupScreen({ navigation }: any) {
       region: region.label,
       regionCode: region.code,
       budget,
+      budgetPeriod,
       categories: [...selectedCategories, ...selectedKeywords],
     };
 
@@ -119,7 +128,18 @@ export function SetupScreen({ navigation }: any) {
       </Card>
 
       <Card>
-        <Text style={styles.label}>월 장보기 예산</Text>
+        <Text style={styles.label}>장보기 예산 단위</Text>
+        <View style={styles.wrap}>
+          {BUDGET_PERIOD_OPTIONS.map((option) => (
+            <Chip
+              key={option.value}
+              label={option.label}
+              selected={budgetPeriod === option.value}
+              onPress={() => setBudgetPeriod(option.value)}
+            />
+          ))}
+        </View>
+        <Text style={styles.label}>{budgetPeriod === 'weekly' ? '주간' : '월간'} 장보기 예산</Text>
         <TextInput
           value={budgetText}
           onChangeText={setBudgetText}
@@ -127,7 +147,7 @@ export function SetupScreen({ navigation }: any) {
           keyboardType="number-pad"
           style={styles.input}
         />
-        <Text style={styles.help}>원화 정수만 저장합니다.</Text>
+        <Text style={styles.help}>{budgetPeriod === 'weekly' ? '주간' : '월간'} 기준 금액을 원화 정수로 저장합니다.</Text>
       </Card>
 
       <Card>

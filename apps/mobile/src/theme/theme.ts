@@ -1,20 +1,20 @@
 export const colors = {
-  primary: '#111827',
-  background: '#FFFFFF',
-  surface: '#F8FAFC',
-  border: '#E5E7EB',
-  textPrimary: '#111827',
-  textSecondary: '#4B5563',
-  textMuted: '#6B7280',
-  success: '#16A34A',
-  successSoft: '#DCFCE7',
-  warning: '#F59E0B',
-  warningSoft: '#FEF3C7',
-  danger: '#DC2626',
-  dangerSoft: '#FEE2E2',
-  info: '#2563EB',
-  infoSoft: '#DBEAFE',
-  white: '#FFFFFF',
+  primary: '#2F2A1F',
+  background: '#FFFDF8',
+  surface: '#FFF7ED',
+  border: '#E8DCCB',
+  textPrimary: '#2F2A1F',
+  textSecondary: '#6F5F4A',
+  textMuted: '#8A7A66',
+  success: '#2F8F5B',
+  successSoft: '#E1F4E7',
+  warning: '#C6781E',
+  warningSoft: '#FFF1D6',
+  danger: '#C24135',
+  dangerSoft: '#FBE3DE',
+  info: '#0E7490',
+  infoSoft: '#DDF4F1',
+  white: '#FFFDF9',
 };
 
 export const spacing = {
@@ -26,11 +26,11 @@ export const spacing = {
 
 export const typography = {
   display: 28,
-  title: 22,
+  title: 24,
   section: 18,
-  body: 15,
-  caption: 12,
-  price: 26,
+  body: 16,
+  caption: 13,
+  price: 28,
 };
 
 export const radius = {

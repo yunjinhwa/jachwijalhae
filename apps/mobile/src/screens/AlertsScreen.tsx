@@ -8,6 +8,7 @@ import { jachwiApi } from '../services/jachwiApi';
 import { colors, radius, typography } from '../theme/theme';
 import type { PriceAlert } from '../types/domain';
 import { formatWon } from '../utils/format';
+import { navigateStack } from '../utils/navigation';
 
 export function AlertsScreen({ navigation }: any) {
   const alertsResource = useApiResource(() => jachwiApi.getAlerts(), []);
@@ -63,7 +64,7 @@ export function AlertsScreen({ navigation }: any) {
 
       {alerts.map((alert) => (
         <View key={alert.id} style={styles.alertRow}>
-          <Pressable style={styles.alertMain} onPress={() => navigation.navigate('AlertEdit', { id: alert.id })}>
+          <Pressable style={styles.alertMain} onPress={() => navigateStack(navigation, 'AlertEdit', { id: alert.id })}>
             <Text style={styles.alertTitle}>{alert.name}</Text>
             <Text style={styles.alertMeta}>목표가 {formatWon(alert.targetPrice)} 이하</Text>
             {alert.reached ? <Text style={styles.reached}>목표가 도달</Text> : null}
@@ -78,8 +79,8 @@ export function AlertsScreen({ navigation }: any) {
       ))}
 
       <View style={styles.actions}>
-        <Button label="알림 만들기" onPress={() => navigation.navigate('AlertEdit')} />
-        <Button label="알림 이력" variant="secondary" onPress={() => navigation.navigate('AlertHistory')} />
+        <Button label="알림 만들기" onPress={() => navigateStack(navigation, 'AlertEdit')} />
+        <Button label="알림 이력" variant="secondary" onPress={() => navigateStack(navigation, 'AlertHistory')} />
       </View>
 
       <DataNotice updatedAt="2026-05-21 09:00" source="가격 알림은 공공데이터 갱신 후 판단됩니다." />

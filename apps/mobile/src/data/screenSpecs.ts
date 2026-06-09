@@ -323,7 +323,7 @@ export const screenSpecs: ScreenSpec[] = [
     tab: '목록',
     api: 'GET /shopping-list/budget',
     state: 'budget,total,remaining',
-    notes: ['월 예산 대비 지출', '초과 경고', '예산 설정 연결'],
+    notes: ['주간/월간 예산 대비 지출', '초과 경고', '예산 설정 연결'],
     kind: 'shoppingBudget',
   },
   {

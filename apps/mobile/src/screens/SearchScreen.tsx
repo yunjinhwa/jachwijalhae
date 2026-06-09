@@ -7,6 +7,7 @@ import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { colors, radius, typography } from '../theme/theme';
 import type { PriceItem } from '../types/domain';
+import { navigateStack } from '../utils/navigation';
 
 const RECENT_KEYWORDS = ['계란', '라면', '화장지', '우유'];
 const POPULAR_KEYWORDS = ['쌀', '대파', '세탁세제', '참치캔', '우유'];
@@ -103,8 +104,8 @@ export function SearchScreen({ navigation }: any) {
           </Card>
 
           <View style={styles.linkRow}>
-            <Button label="카테고리 보기" variant="secondary" onPress={() => navigation.navigate('Categories')} />
-            <Button label="가격 비교" variant="secondary" onPress={() => navigation.navigate('CompareSelect')} />
+            <Button label="카테고리 보기" variant="secondary" onPress={() => navigateStack(navigation, 'Categories')} />
+            <Button label="가격 비교" variant="secondary" onPress={() => navigateStack(navigation, 'CompareSelect')} />
           </View>
         </>
       ) : null}
@@ -120,10 +121,10 @@ export function SearchScreen({ navigation }: any) {
               price={item.avgPrice}
               changeRate={item.changeRate7d}
               decision={item.decision}
-              onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+              onPress={() => navigateStack(navigation, 'ItemDetail', { itemId: item.id })}
             />
           ))}
-          <Button label="필터/정렬" variant="secondary" onPress={() => navigation.navigate('ItemFilter')} />
+          <Button label="필터/정렬" variant="secondary" onPress={() => navigateStack(navigation, 'ItemFilter')} />
         </>
       ) : null}
 
@@ -132,7 +133,7 @@ export function SearchScreen({ navigation }: any) {
           title="검색 결과가 없습니다"
           description="검색어를 줄이거나 추천 검색어로 다시 찾아보세요."
           actionLabel="추천 검색어 보기"
-          onPress={() => navigation.navigate('SearchEmpty', { keyword })}
+          onPress={() => navigateStack(navigation, 'SearchEmpty', { keyword })}
         />
       ) : null}
 

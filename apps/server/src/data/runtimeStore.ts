@@ -4,6 +4,7 @@ export type UserPreference = {
   region: string;
   regionCode: string;
   budget: number;
+  budgetPeriod: 'weekly' | 'monthly';
   categories: string[];
 };
 
@@ -32,6 +33,7 @@ export const userPreference: UserPreference = {
   region: '부산 사상구',
   regionCode: '26440',
   budget: 320000,
+  budgetPeriod: 'monthly',
   categories: ['생필품', '농산물', '가공식품'],
 };
 
