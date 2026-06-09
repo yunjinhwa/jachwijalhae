@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
 
-const FALLBACK_LAN_HOST = '192.168.10.35';
+const FALLBACK_LAN_HOST = '10.210.172.59';
 const API_PORT = 4000;
 
 function isPrivateHost(host: string) {
