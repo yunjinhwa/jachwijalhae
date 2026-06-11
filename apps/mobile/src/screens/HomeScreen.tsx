@@ -7,10 +7,12 @@ import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
 import { formatWon } from '../utils/format';
+import { navigateStack } from '../utils/navigation';
 
 export function HomeScreen({ navigation }: any) {
   const region = usePreferenceStore((state) => state.region);
   const budget = usePreferenceStore((state) => state.budget);
+  const budgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const categories = usePreferenceStore((state) => state.categories);
   const home = useApiResource(() => jachwiApi.getHomeSummary(), []);
   const waitRecommendations = useApiResource(() => jachwiApi.getRecommendations('WAIT'), []);
@@ -18,10 +20,11 @@ export function HomeScreen({ navigation }: any) {
   const buyItems = home.data?.recommendations ?? [];
   const waitItems = waitRecommendations.data?.itemList ?? [];
   const unreadAlerts = home.data?.alerts.unreadCount ?? 0;
+  const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
 
   return (
     <ScreenLayout
-      title="홈"
+      title="자취잘해"
       eyebrow="GET /home/summary"
       description={`${region} 기준 생활물가 요약`}
     >
@@ -41,7 +44,7 @@ export function HomeScreen({ navigation }: any) {
       <Card>
         <SectionTitle title="내 장보기 기준" action={`${unreadAlerts}개 알림`} />
         <View style={styles.profileGrid}>
-          <Metric label="월 예산" value={formatWon(budget)} />
+          <Metric label={`${budgetPeriodLabel} 예산`} value={formatWon(budget)} />
           <Metric label="관심 카테고리" value={`${categories.length}개`} />
         </View>
         <Text style={styles.muted}>{categories.join(', ')}</Text>
@@ -53,24 +56,30 @@ export function HomeScreen({ navigation }: any) {
         <Metric label="안정" value={home.loading ? '-' : `${summary.stableCount}개`} tone="info" />
       </View>
 
-      <View style={styles.quickGrid}>
-        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('PriceSummary')}>
-          <Text style={styles.quickTitle}>물가 요약</Text>
-          <Text style={styles.quickBody}>주간/월간 상승·하락 품목</Text>
+      <Card>
+        <SectionTitle title="바로 확인" action="가격 흐름" />
+        <Pressable style={styles.menuRow} onPress={() => navigateStack(navigation, 'PriceSummary')}>
+          <View style={styles.menuMain}>
+            <Text style={styles.menuTitle}>물가 요약</Text>
+            <Text style={styles.menuBody}>주간/월간 상승·하락 품목</Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
         </Pressable>
-        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('Recommendations')}>
-          <Text style={styles.quickTitle}>추천 구매</Text>
-          <Text style={styles.quickBody}>BUY / WAIT / REPLACE</Text>
+        <Pressable style={styles.menuRow} onPress={() => navigateStack(navigation, 'Recommendations')}>
+          <View style={styles.menuMain}>
+            <Text style={styles.menuTitle}>추천 구매</Text>
+            <Text style={styles.menuBody}>사기 좋은 품목과 기다릴 품목</Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
         </Pressable>
-        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('PriceChanges')}>
-          <Text style={styles.quickTitle}>가격 변동</Text>
-          <Text style={styles.quickBody}>변동률 높은 품목</Text>
+        <Pressable style={[styles.menuRow, styles.menuRowLast]} onPress={() => navigateStack(navigation, 'RecentItems')}>
+          <View style={styles.menuMain}>
+            <Text style={styles.menuTitle}>최근 본 품목</Text>
+            <Text style={styles.menuBody}>다시 확인하기</Text>
+          </View>
+          <Text style={styles.menuArrow}>›</Text>
         </Pressable>
-        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('RecentItems')}>
-          <Text style={styles.quickTitle}>최근 본 품목</Text>
-          <Text style={styles.quickBody}>다시 확인하기</Text>
-        </Pressable>
-      </View>
+      </Card>
 
       <SectionTitle title="지금 사기 좋은 품목" action="추천 기준" />
       {buyItems.map((item) => (
@@ -81,7 +90,7 @@ export function HomeScreen({ navigation }: any) {
           price={item.avgPrice}
           changeRate={item.changeRate7d}
           decision={item.decision}
-          onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+          onPress={() => navigateStack(navigation, 'ItemDetail', { itemId: item.id })}
         />
       ))}
 
@@ -94,7 +103,7 @@ export function HomeScreen({ navigation }: any) {
           price={item.avgPrice}
           changeRate={item.changeRate7d}
           decision={item.decision}
-          onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })}
+          onPress={() => navigateStack(navigation, 'ItemDecision', { itemId: item.id })}
         />
       ))}
 
@@ -138,30 +147,34 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 16,
   },
-  quickGrid: {
+  menuRow: {
+    minHeight: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 24,
-  },
-  quickCard: {
-    width: '48.5%',
-    minHeight: 92,
-    borderRadius: radius.card,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
-  quickTitle: {
+  menuRowLast: {
+    borderBottomWidth: 0,
+  },
+  menuMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  menuTitle: {
     color: colors.primary,
     fontSize: typography.body,
     fontWeight: '800',
   },
-  quickBody: {
+  menuBody: {
     color: colors.textMuted,
     fontSize: typography.caption,
     lineHeight: 18,
+  },
+  menuArrow: {
+    color: colors.textMuted,
+    fontSize: 24,
   },
 });

@@ -29,7 +29,7 @@ import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
-import { Decision, PriceAlert, PriceItem } from '../types/domain';
+import { BudgetPeriod, Decision, PriceAlert, PriceItem } from '../types/domain';
 import { formatWon } from '../utils/format';
 
 type SpecScreenProps = {
@@ -43,6 +43,7 @@ type ShoppingEditSeed = ReturnType<typeof getItem>;
 
 const periodOptions = ['7일', '30일', '90일'];
 const sortOptions = ['인기순', '낮은 가격순', '변동률순'];
+const sellerFilterOptions = ['전체', '마트', '시장', '온라인'];
 const itemBackedKinds = new Set([
   'itemDetail',
   'itemBasic',
@@ -61,10 +62,6 @@ const recommendationBackedKinds = new Set(['recommendations', 'buyDecision', 'wa
 
 function routeString(value: unknown) {
   return typeof value === 'string' ? value : undefined;
-}
-
-function routeStringList(value: unknown) {
-  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : undefined;
 }
 
 function toTrendPeriod(period: string) {
@@ -91,6 +88,27 @@ function searchLocalItems(query?: string) {
   );
 }
 
+function sortPriceItemList(items: PriceItem[], sortOption: string) {
+  const sorted = [...items];
+
+  if (sortOption === '낮은 가격순') {
+    return sorted.sort((a, b) => a.avgPrice - b.avgPrice);
+  }
+
+  if (sortOption === '변동률순') {
+    return sorted.sort((a, b) => Math.abs(b.changeRate7d) - Math.abs(a.changeRate7d));
+  }
+
+  return sorted;
+}
+
+function sellerLabel(type: string) {
+  if (type === 'MART' || type === 'RETAIL') return '마트';
+  if (type === 'MARKET') return '시장';
+  if (type === 'ONLINE') return '온라인';
+  return type;
+}
+
 export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
   const params = route.params ?? {};
   const routeItemId = routeString(params.itemId);
@@ -98,18 +116,26 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
   const selectedItemId = routeItemId ?? (routeId?.startsWith('item_') ? routeId : undefined);
   const routeCategoryId = routeString(params.categoryId);
   const routeKeyword = routeString(params.keyword);
-  const routeCompareIds = routeStringList(params.ids);
+  const routeCompareItemId =
+    routeString(params.itemId) ??
+    (Array.isArray(params.ids)
+      ? params.ids.find((entry: unknown): entry is string => typeof entry === 'string')
+      : undefined);
   const region = usePreferenceStore((state) => state.region);
   const budget = usePreferenceStore((state) => state.budget);
+  const budgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
+  const setBudgetPeriod = usePreferenceStore((state) => state.setBudgetPeriod);
   const [period, setPeriod] = useState(periodOptions[0]);
+  const [sortOption, setSortOption] = useState(sortOptions[0]);
+  const [sellerFilter, setSellerFilter] = useState(sellerFilterOptions[0]);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('ALL');
   const [allAlertHistoryRead, setAllAlertHistoryRead] = useState(false);
-  const [selectedCompareIds, setSelectedCompareIds] = useState<string[]>([
-    ...(routeCompareIds?.slice(0, 2) ?? [priceItems[0].id, priceItems[1].id]),
-  ]);
+  const [selectedCompareItemId, setSelectedCompareItemId] = useState(routeCompareItemId ?? priceItems[0].id);
 
   const fallbackItem = getItem(selectedItemId);
   const activeItemId = selectedItemId ?? fallbackItem.id;
+  const activeCompareItemId = routeCompareItemId ?? selectedCompareItemId;
+  const compareStoreItemId = spec.kind === 'compareStores' ? activeItemId : activeCompareItemId;
   const fallbackCategoryId = routeCategoryId ?? fallbackItem.categoryId;
   const shouldLoadItem = itemBackedKinds.has(spec.kind);
   const shouldLoadCategories = categoryBackedKinds.has(spec.kind);
@@ -176,17 +202,15 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
     recommendationBackedKinds.has(spec.kind) ? jachwiApi.getRecommendations(recommendationType) : Promise.resolve(null),
     [spec.kind, recommendationType],
   );
-  const compareResultResource = useApiResource(() =>
-    spec.kind === 'compareResult' ? jachwiApi.getCompareItems(selectedCompareIds) : Promise.resolve(null),
-    [spec.kind, selectedCompareIds.join(',')],
-  );
   const compareRegionsResource = useApiResource(() =>
     spec.kind === 'compareRegions' ? jachwiApi.getCompareRegions(activeItemId) : Promise.resolve(null),
     [spec.kind, activeItemId],
   );
   const compareStoresResource = useApiResource(() =>
-    spec.kind === 'compareStores' ? jachwiApi.getCompareStores(activeItemId) : Promise.resolve(null),
-    [spec.kind, activeItemId],
+    spec.kind === 'compareStores' || spec.kind === 'compareResult'
+      ? jachwiApi.getCompareStores(compareStoreItemId)
+      : Promise.resolve(null),
+    [spec.kind, compareStoreItemId],
   );
   const shoppingBudgetResource = useApiResource(() =>
     spec.kind === 'shoppingBudget' ? jachwiApi.getShoppingBudget() : Promise.resolve(null),
@@ -210,7 +234,6 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
   const categoryId = routeCategoryId ?? item.categoryId;
   const category = liveCategories.find((entry) => entry.id === categoryId) ?? liveCategories[0] ?? categories[0];
   const categoryItems = categoryItemsResource.data?.items ?? getItemsByCategory(categoryId);
-  const selectedCompareItems = compareResultResource.data?.items ?? selectedCompareIds.map((id) => getItem(id));
   const searchItems = searchResource.data?.items ?? searchLocalItems(routeKeyword);
   const resourceError =
     priceSummaryResource.error ??
@@ -226,7 +249,6 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
     itemDecisionResource.error ??
     alternativesResource.error ??
     recommendationsResource.error ??
-    compareResultResource.error ??
     compareRegionsResource.error ??
     compareStoresResource.error ??
     shoppingBudgetResource.error ??
@@ -383,8 +405,8 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
       case 'searchResults':
         return (
           <>
-            <ChipRow options={sortOptions} selected="인기순" />
-            {searchItems.slice(0, 6).map((entry) => (
+            <ChipRow options={sortOptions} selected={sortOption} onSelect={setSortOption} />
+            {sortPriceItemList(searchItems, sortOption).slice(0, 6).map((entry) => (
               <PriceRow
                 key={entry.id}
                 name={entry.name}
@@ -439,8 +461,8 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
         return (
           <>
             <SectionTitle title={params.categoryName ?? category.name} action={`${categoryItems.length}개`} />
-            <ChipRow options={sortOptions} selected="인기순" />
-            {categoryItems.map((entry) => (
+            <ChipRow options={sortOptions} selected={sortOption} onSelect={setSortOption} />
+            {sortPriceItemList(categoryItems, sortOption).map((entry) => (
               <PriceRow
                 key={entry.id}
                 name={entry.name}
@@ -546,17 +568,18 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
 
       case 'sellerPrices': {
         const sellers = itemSellersResource.data?.sellerPrices ?? item.sellers;
+        const filteredSellers = sellers
+          .filter((seller) => sellerFilter === '전체' || sellerLabel(seller.type) === sellerFilter)
+          .sort((a, b) => a.price - b.price);
 
         return (
           <>
-            <ChipRow options={['전체', '마트', '시장', '온라인']} selected="전체" />
-            {[...sellers]
-              .sort((a, b) => a.price - b.price)
-              .map((seller) => (
+            <ChipRow options={sellerFilterOptions} selected={sellerFilter} onSelect={setSellerFilter} />
+            {filteredSellers.map((seller) => (
                 <View key={seller.name} style={styles.listRow}>
                   <View style={styles.rowMain}>
                     <Text style={styles.rowTitle}>{seller.name}</Text>
-                    <Text style={styles.rowMeta}>{seller.type}{seller.distance ? ` · ${seller.distance}` : ''}</Text>
+                    <Text style={styles.rowMeta}>{sellerLabel(seller.type)}{seller.distance ? ` · ${seller.distance}` : ''}</Text>
                   </View>
                   <Text style={styles.priceText}>{formatWon(seller.price)}</Text>
                 </View>
@@ -624,22 +647,15 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
         return (
           <>
             <Card>
-              <SectionTitle title="비교할 품목" action={`${selectedCompareIds.length}/2`} />
+              <SectionTitle title="판매처 가격을 비교할 품목" action={getItem(selectedCompareItemId).name} />
               {searchItems.slice(0, 5).map((entry) => {
-                const selected = selectedCompareIds.includes(entry.id);
+                const selected = selectedCompareItemId === entry.id;
 
                 return (
                   <Pressable
                     key={entry.id}
                     style={[styles.selectRow, selected && styles.selectRowOn]}
-                    onPress={() => {
-                      setSelectedCompareIds((prev) => {
-                        if (prev.includes(entry.id)) {
-                          return prev.filter((id) => id !== entry.id);
-                        }
-                        return [...prev, entry.id].slice(-2);
-                      });
-                    }}
+                    onPress={() => setSelectedCompareItemId(entry.id)}
                   >
                     <Text style={styles.rowTitle}>{entry.name}</Text>
                     <Text style={styles.priceText}>{formatWon(entry.avgPrice)}</Text>
@@ -648,37 +664,47 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
               })}
             </Card>
             <Button
-              label="비교 결과 보기"
-              disabled={selectedCompareIds.length < 2}
-              onPress={() => navigation.navigate('CompareResult', { ids: selectedCompareIds })}
+              label="판매처 가격 비교"
+              onPress={() => navigation.navigate('CompareResult', { itemId: selectedCompareItemId })}
             />
           </>
         );
 
       case 'compareResult': {
-        const winner =
-          compareResultResource.data?.winner ??
-          (selectedCompareItems[0].avgPrice <= selectedCompareItems[1].avgPrice
-            ? selectedCompareItems[0]
-            : selectedCompareItems[1]);
-        const priceGap =
-          compareResultResource.data?.priceGap ??
-          Math.abs(selectedCompareItems[0].avgPrice - selectedCompareItems[1].avgPrice);
+        const compareItem = compareStoresResource.data?.item ?? getItem(activeCompareItemId);
+        const stores = [...(compareStoresResource.data?.stores ?? compareItem.sellers)].sort(
+          (a, b) => a.price - b.price,
+        );
+        const cheapest = stores[0];
+        const mostExpensive = stores[stores.length - 1];
+        const priceGap = cheapest && mostExpensive ? mostExpensive.price - cheapest.price : 0;
 
         return (
           <>
-            <View style={styles.metricRow}>
-              {selectedCompareItems.map((entry) => (
-                <Metric key={entry.id} label={entry.name} value={formatWon(entry.avgPrice)} />
+            <Card>
+              <SectionTitle title={`${compareItem.name} 판매처별 가격`} action={`${stores.length}곳`} />
+              {stores.map((seller) => (
+                <InfoRow
+                  key={seller.name}
+                  label={seller.distance ? `${seller.name} · ${seller.distance}` : seller.name}
+                  value={formatWon(seller.price)}
+                />
               ))}
-            </View>
+            </Card>
             <Card>
               <SectionTitle title="비교 요약" />
-              <InfoRow label="더 저렴한 품목" value={winner.name} />
+              <InfoRow
+                label="가장 저렴한 판매처"
+                value={cheapest ? `${cheapest.name} · ${formatWon(cheapest.price)}` : '확인 필요'}
+              />
+              <InfoRow
+                label="가장 비싼 판매처"
+                value={mostExpensive ? `${mostExpensive.name} · ${formatWon(mostExpensive.price)}` : '확인 필요'}
+              />
               <InfoRow label="가격 차이" value={formatWon(priceGap)} />
-              <InfoRow label="추천 판단" value="낮은 가격과 하락 흐름 품목 우선" />
+              <InfoRow label="추천 판단" value="같은 품목은 최저가 판매처 우선" />
             </Card>
-            <Button label="장보기 추가" onPress={() => navigation.navigate('ShoppingEdit', { id: winner.id })} />
+            <Button label="장보기 추가" onPress={() => navigation.navigate('ShoppingEdit', { id: compareItem.id })} />
           </>
         );
       }
@@ -727,15 +753,28 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
           shoppingItems.reduce((sum, entry) => sum + entry.expectedPrice * entry.quantity, 0);
         const apiBudget = shoppingBudgetResource.data?.budget ?? budget;
         const remaining = shoppingBudgetResource.data?.remaining ?? apiBudget - total;
+        const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
 
         return (
           <>
+            <Card>
+              <SectionTitle title="예산 기준" action={budgetPeriodLabel} />
+              <ChipRow
+                options={['주간', '월간']}
+                selected={budgetPeriodLabel}
+                onSelect={(value) => {
+                  const nextPeriod: BudgetPeriod = value === '주간' ? 'weekly' : 'monthly';
+                  setBudgetPeriod(nextPeriod);
+                }}
+              />
+              <Text style={styles.bodyText}>장보기 목록 금액을 선택한 예산 단위와 비교합니다.</Text>
+            </Card>
             <View style={styles.metricRow}>
-              <Metric label="월 예산" value={formatWon(apiBudget)} />
+              <Metric label={`${budgetPeriodLabel} 예산`} value={formatWon(apiBudget)} />
               <Metric label="예상 지출" value={formatWon(total)} tone={remaining >= 0 ? 'success' : 'danger'} />
             </View>
             <Card>
-              <SectionTitle title="잔여 예산" action={remaining >= 0 ? '여유' : '초과'} />
+              <SectionTitle title={`${budgetPeriodLabel} 잔여 예산`} action={remaining >= 0 ? '여유' : '초과'} />
               <Text style={[styles.bigPrice, remaining < 0 && styles.dangerText]}>{formatWon(Math.abs(remaining))}</Text>
               <Text style={styles.bodyText}>{remaining >= 0 ? '현재 목록은 예산 안에 있습니다.' : '예산을 초과했습니다. 품목을 조정해보세요.'}</Text>
             </Card>
@@ -807,11 +846,12 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
             <Card>
               <SectionTitle title="앱 설정" />
               <InfoRow label="기준 지역" value={region} />
+              <InfoRow label="예산 단위" value={budgetPeriod === 'weekly' ? '주간' : '월간'} />
               <InfoRow label="알림 스케줄" value="DAILY_09" />
             </Card>
             <Card>
               <SectionTitle title="약관/개인정보" />
-              <Text style={styles.bodyText}>MVP에서는 거주 지역, 월 예산, 관심 카테고리만 저장합니다.</Text>
+              <Text style={styles.bodyText}>MVP에서는 거주 지역, 예산 단위, 장보기 예산, 관심 카테고리만 저장합니다.</Text>
             </Card>
           </>
         );
@@ -822,7 +862,12 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
   };
 
   return (
-    <ScreenLayout title={spec.title} eyebrow={`${String(spec.screenNo).padStart(2, '0')} · ${spec.api}`} description={spec.routePath}>
+    <ScreenLayout
+      title={spec.title}
+      eyebrow={`${String(spec.screenNo).padStart(2, '0')} · ${spec.api}`}
+      description={spec.routePath}
+      onBack={navigation.canGoBack?.() ? () => navigation.goBack() : undefined}
+    >
       {resourceError ? (
         <Card compact>
           <Text style={styles.errorText}>서버 API 연결 실패: {resourceError}</Text>
@@ -831,9 +876,6 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
       {renderContent()}
       {spec.requiresPublicApiKey ? (
         <DataNotice updatedAt={item.updatedAt} source={item.source} />
-      ) : null}
-      {navigation.canGoBack?.() ? (
-        <Button label="이전 화면" variant="secondary" onPress={() => navigation.goBack()} />
       ) : null}
     </ScreenLayout>
   );
@@ -1094,14 +1136,59 @@ function ItemOverview({ item, navigation }: { item: ReturnType<typeof getItem>; 
         <Text style={styles.bigPrice}>{formatWon(item.avgPrice)}</Text>
         <Text style={styles.bodyText}>{item.reason}</Text>
       </Card>
-      <View style={styles.gridButtons}>
-        <Button label="기본 정보" variant="secondary" onPress={() => navigation.navigate('ItemBasic', { itemId: item.id })} />
-        <Button label="가격 정보" variant="secondary" onPress={() => navigation.navigate('ItemPrices', { itemId: item.id })} />
-        <Button label="가격 추이" variant="secondary" onPress={() => navigation.navigate('PriceTrend', { itemId: item.id })} />
-        <Button label="판매처별" variant="secondary" onPress={() => navigation.navigate('SellerPrices', { itemId: item.id })} />
-      </View>
-      <Button label="구매 판단 보기" onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })} />
+      <Button label="장바구니 담기" onPress={() => navigation.navigate('ShoppingEdit', { id: item.id })} />
+      <Card>
+        <SectionTitle title="자세히 보기" />
+        <DetailActionRow
+          title="기본 정보"
+          description="분류, 단위, 영양 정보"
+          onPress={() => navigation.navigate('ItemBasic', { itemId: item.id })}
+        />
+        <DetailActionRow
+          title="가격 정보"
+          description="평균가와 최저·최고가"
+          onPress={() => navigation.navigate('ItemPrices', { itemId: item.id })}
+        />
+        <DetailActionRow
+          title="가격 추이"
+          description="최근 가격 흐름"
+          onPress={() => navigation.navigate('PriceTrend', { itemId: item.id })}
+        />
+        <DetailActionRow
+          title="판매처별"
+          description="판매처별 가격 비교"
+          onPress={() => navigation.navigate('SellerPrices', { itemId: item.id })}
+        />
+        <DetailActionRow
+          title="구매 판단"
+          description="사도 되는지 한 번에 확인"
+          last
+          onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })}
+        />
+      </Card>
     </>
+  );
+}
+
+function DetailActionRow({
+  title,
+  description,
+  last = false,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  last?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={[styles.detailActionRow, last && styles.detailActionRowLast]} onPress={onPress}>
+      <View style={styles.detailActionMain}>
+        <Text style={styles.detailActionTitle}>{title}</Text>
+        <Text style={styles.detailActionBody}>{description}</Text>
+      </View>
+      <Text style={styles.detailActionArrow}>›</Text>
+    </Pressable>
   );
 }
 
@@ -1260,9 +1347,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
   },
-  gridButtons: {
-    gap: 10,
-    marginBottom: 10,
+  detailActionRow: {
+    minHeight: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  detailActionRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailActionMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  detailActionTitle: {
+    color: colors.primary,
+    fontSize: typography.body,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  detailActionBody: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    lineHeight: 18,
+  },
+  detailActionArrow: {
+    color: colors.textMuted,
+    fontSize: 24,
   },
   selectRow: {
     minHeight: 52,

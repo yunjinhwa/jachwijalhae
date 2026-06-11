@@ -248,28 +248,34 @@ const toneStyles = {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 16,
+    padding: 18,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
     marginBottom: 16,
     gap: 12,
+    shadowColor: '#5C4632',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardCompact: {
     padding: 12,
     marginBottom: 10,
   },
   button: {
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: radius.control,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
+    backgroundColor: colors.info,
+    paddingHorizontal: 18,
+    marginBottom: 10,
   },
   buttonSecondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -280,7 +286,7 @@ const styles = StyleSheet.create({
   buttonLabel: {
     color: colors.white,
     fontSize: typography.body,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   buttonSecondaryLabel: {
     color: colors.primary,
@@ -292,18 +298,18 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   chip: {
-    minHeight: 36,
+    minHeight: 38,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.white,
-    paddingHorizontal: 13,
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.info,
+    borderColor: colors.info,
   },
   chipLabel: {
     color: colors.primary,
@@ -331,9 +337,9 @@ const styles = StyleSheet.create({
   },
   metric: {
     flex: 1,
-    minHeight: 82,
+    minHeight: 88,
     borderRadius: radius.card,
-    padding: 12,
+    padding: 14,
     justifyContent: 'center',
   },
   metricValue: {
@@ -357,11 +363,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   priceRow: {
-    minHeight: 68,
+    minHeight: 74,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 12,
+    padding: 14,
     backgroundColor: colors.white,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -474,7 +480,7 @@ const styles = StyleSheet.create({
   chartBar: {
     width: '100%',
     borderRadius: 4,
-    backgroundColor: colors.info,
+    backgroundColor: colors.success,
   },
   emptyTitle: {
     color: colors.primary,

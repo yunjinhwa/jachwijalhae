@@ -34,11 +34,12 @@ v1Router.get('/health', (req, res) => {
 });
 
 v1Router.post('/users/preferences', (req, res) => {
-  const { region, regionCode, budget, categories: selectedCategories } = req.body ?? {};
+  const { region, regionCode, budget, budgetPeriod, categories: selectedCategories } = req.body ?? {};
 
   if (typeof region === 'string') userPreference.region = region;
   if (typeof regionCode === 'string') userPreference.regionCode = regionCode;
   if (typeof budget === 'number') userPreference.budget = budget;
+  if (budgetPeriod === 'weekly' || budgetPeriod === 'monthly') userPreference.budgetPeriod = budgetPeriod;
   if (Array.isArray(selectedCategories)) userPreference.categories = selectedCategories;
 
   sendOk(req, res, userPreference);
@@ -266,6 +267,7 @@ v1Router.get('/shopping-list/budget', (req, res) => {
 
   sendOk(req, res, {
     budget: userPreference.budget,
+    budgetPeriod: userPreference.budgetPeriod,
     total,
     remaining: userPreference.budget - total,
   });

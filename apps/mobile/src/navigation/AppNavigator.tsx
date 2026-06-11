@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -20,15 +20,30 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const tabMeta = {
-  HomeTab: { title: '홈', mark: 'H' },
-  SearchTab: { title: '검색', mark: 'S' },
-  ShoppingTab: { title: '목록', mark: 'L' },
-  AlertsTab: { title: '알림', mark: 'A' },
-  MyPageTab: { title: 'MY', mark: 'M' },
+  HomeTab: { title: '홈', mark: '홈' },
+  SearchTab: { title: '검색', mark: '찾' },
+  ShoppingTab: { title: '장보기', mark: '장' },
+  AlertsTab: { title: '알림', mark: '알' },
+  MyPageTab: { title: 'MY', mark: '나' },
 };
 
-function TabMark({ mark, color }: { mark: string; color: string }) {
-  return <Text style={{ color, fontSize: 11, fontWeight: '900' }}>{mark}</Text>;
+function TabMark({ mark, color, focused }: { mark: string; color: string; focused: boolean }) {
+  return (
+    <View
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? colors.infoSoft : colors.surface,
+        borderWidth: 1,
+        borderColor: focused ? colors.info : colors.border,
+      }}
+    >
+      <Text style={{ color, fontSize: 14, fontWeight: '900' }}>{mark}</Text>
+    </View>
+  );
 }
 
 function MainTabs() {
@@ -40,17 +55,23 @@ function MainTabs() {
         return {
           headerShown: false,
           title: meta.title,
-          tabBarIcon: ({ color }) => <TabMark mark={meta.mark} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabMark mark={meta.mark} color={color} focused={focused} />,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: '800',
+            marginTop: 2,
           },
           tabBarStyle: {
-            minHeight: 64,
-            paddingTop: 6,
-            paddingBottom: 8,
+            alignSelf: 'center',
+            width: '100%',
+            maxWidth: 760,
+            minHeight: 78,
+            paddingTop: 8,
+            paddingBottom: 12,
+            paddingHorizontal: 10,
+            backgroundColor: colors.white,
             borderTopColor: colors.border,
           },
         };

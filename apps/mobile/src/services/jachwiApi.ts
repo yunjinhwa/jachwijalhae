@@ -1,7 +1,8 @@
-import { API_BASE_URL } from './apiClient';
+import { API_BASE_URL, API_BASE_URLS } from './apiClient';
 import {
   AlertHistoryItem,
   AlternativeItem,
+  BudgetPeriod,
   Category,
   DataSourcesResponse,
   Decision,
@@ -24,12 +25,19 @@ type ApiResponse<T> = {
 
 const REQUEST_TIMEOUT_MS = 8000;
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+class ApiResponseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiResponseError';
+  }
+}
+
+async function fetchWithTimeout(baseUrl: string, path: string, init?: RequestInit) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    return await fetch(`${baseUrl}${path}`, {
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
@@ -37,22 +45,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       signal: controller.signal,
     });
-    const payload = (await response.json()) as ApiResponse<T>;
-
-    if (!response.ok || !payload.success) {
-      throw new Error(payload.error?.message ?? 'API 요청에 실패했습니다.');
-    }
-
-    return payload.data;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('서버 응답이 지연되고 있습니다. 서버와 같은 Wi-Fi인지 확인해 주세요.');
-    }
-
-    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let lastError: unknown;
+
+  for (const baseUrl of API_BASE_URLS) {
+    try {
+      const response = await fetchWithTimeout(baseUrl, path, init);
+      const payload = (await response.json()) as ApiResponse<T>;
+
+      if (!response.ok || !payload.success) {
+        throw new ApiResponseError(payload.error?.message ?? 'API 요청에 실패했습니다.');
+      }
+
+      return payload.data;
+    } catch (error) {
+      if (error instanceof ApiResponseError) {
+        throw error;
+      }
+
+      lastError = error;
+    }
+  }
+
+  if (lastError instanceof Error && lastError.name === 'AbortError') {
+    throw new Error(`서버 응답이 지연되고 있습니다. 감지된 서버 주소(${API_BASE_URL})와 후보 주소(${API_BASE_URLS.join(', ')})를 확인해 주세요.`);
+  }
+
+  if (lastError instanceof TypeError) {
+    throw new Error(`서버에 연결하지 못했습니다. 감지된 서버 주소는 ${API_BASE_URL}이고 후보 주소는 ${API_BASE_URLS.join(', ')} 입니다.`);
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('서버 요청에 실패했습니다.');
 }
 
 export const jachwiApi = {
@@ -201,6 +229,7 @@ export const jachwiApi = {
   getShoppingBudget: () =>
     request<{
       budget: number;
+      budgetPeriod: BudgetPeriod;
       total: number;
       remaining: number;
     }>('/shopping-list/budget'),
@@ -254,6 +283,7 @@ export const jachwiApi = {
         region: string;
         regionCode: string;
         budget: number;
+        budgetPeriod: BudgetPeriod;
         categories: string[];
       };
     }>('/users/me'),
@@ -262,6 +292,7 @@ export const jachwiApi = {
     region: string;
     regionCode: string;
     budget: number;
+    budgetPeriod?: BudgetPeriod;
     categories: string[];
   }) =>
     request<typeof payload>('/users/preferences', {

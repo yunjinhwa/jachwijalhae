@@ -1,12 +1,13 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Card, DataNotice, InfoRow, SectionTitle } from '../components/ui';
+import { Button, Card, DataNotice, InfoRow, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
 import { formatWon } from '../utils/format';
+import { navigateStack } from '../utils/navigation';
 
 const MENU = [
   { label: '지역/예산 설정', route: 'Setup' },
@@ -18,33 +19,56 @@ const MENU = [
 export function MyPageScreen({ navigation }: any) {
   const storeRegion = usePreferenceStore((state) => state.region);
   const storeBudget = usePreferenceStore((state) => state.budget);
+  const storeBudgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const storeCategories = usePreferenceStore((state) => state.categories);
+  const resetPreferences = usePreferenceStore((state) => state.resetPreferences);
   const userResource = useApiResource(() => jachwiApi.getUserMe(), []);
   const preferences = userResource.data?.preferences;
   const region = preferences?.region ?? storeRegion;
   const budget = preferences?.budget ?? storeBudget;
+  const budgetPeriod = preferences?.budgetPeriod ?? storeBudgetPeriod;
   const categories = preferences?.categories ?? storeCategories;
   const authState = userResource.data?.profile.authState ?? 'GUEST_SYNC';
+  const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '저장된 설정을 초기화하고 처음 화면으로 돌아갈까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: () => {
+          resetPreferences();
+          const parent = navigation.getParent?.();
+          parent?.reset?.({
+            index: 0,
+            routes: [{ name: 'Onboarding' }],
+          });
+        },
+      },
+    ]);
+  };
 
   return (
     <ScreenLayout title="마이페이지" eyebrow="GET /users/me" description="익명 사용자도 장보기와 알림을 저장할 수 있습니다.">
       <Card>
         <SectionTitle title="내 정보" action={userResource.loading ? '불러오는 중' : authState} />
         <InfoRow label="기준 지역" value={region} />
-        <InfoRow label="월 예산" value={formatWon(budget)} />
+        <InfoRow label={`${budgetPeriodLabel} 예산`} value={formatWon(budget)} />
         <InfoRow label="관심 카테고리" value={categories.join(', ')} />
         {userResource.error ? <Text style={styles.sourceStatusRequired}>{userResource.error}</Text> : null}
       </Card>
 
       <View style={styles.menuList}>
         {MENU.map((item) => (
-          <Pressable key={item.route} style={styles.menuRow} onPress={() => navigation.navigate(item.route)}>
+          <Pressable key={item.route} style={styles.menuRow} onPress={() => navigateStack(navigation, item.route)}>
             <Text style={styles.menuText}>{item.label}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </Pressable>
         ))}
       </View>
 
+      <Button label="로그아웃" variant="secondary" onPress={handleLogout} />
       <DataNotice source="정확한 주소나 실시간 위치는 MVP 범위에서 수집하지 않습니다." />
     </ScreenLayout>
   );

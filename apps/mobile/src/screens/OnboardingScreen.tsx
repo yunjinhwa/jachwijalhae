@@ -16,6 +16,10 @@ export function OnboardingScreen({ navigation }: any) {
         <Text style={styles.heroText}>평균가보다 낮은 품목은 장보기 목록으로 바로 담습니다.</Text>
       </View>
 
+      <Text style={styles.introText}>
+        자주 사는 식품과 생필품 가격을 지역 기준으로 모아 보고, 예산 안에서 살 품목과 기다릴 품목을 쉽게 고를 수 있게 도와줍니다.
+      </Text>
+
       <Card>
         <Text style={styles.feature}>지역 기준 평균가와 판매처별 가격 비교</Text>
         <Text style={styles.feature}>BUY / WAIT / REPLACE 구매 판단</Text>
@@ -50,6 +54,12 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     lineHeight: 22,
   },
+  introText: {
+    color: colors.textSecondary,
+    fontSize: typography.body,
+    lineHeight: 24,
+    marginBottom: 16,
+  },
   feature: {
     color: colors.primary,
     fontSize: typography.body,
@@ -57,6 +67,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actions: {
-    gap: 10,
+    gap: 16,
+    marginTop: 4,
   },
 });

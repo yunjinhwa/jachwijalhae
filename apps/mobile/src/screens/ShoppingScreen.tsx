@@ -9,9 +9,11 @@ import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
 import type { ShoppingListItem } from '../types/domain';
 import { formatWon } from '../utils/format';
+import { navigateStack } from '../utils/navigation';
 
 export function ShoppingScreen({ navigation }: any) {
   const budget = usePreferenceStore((state) => state.budget);
+  const budgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const listResource = useApiResource(() => jachwiApi.getShoppingList(), []);
   const [items, setItems] = useState<ShoppingListItem[]>([]);
 
@@ -40,6 +42,7 @@ export function ShoppingScreen({ navigation }: any) {
   );
 
   const budgetPercent = Math.round((total / Math.max(budget, 1)) * 100);
+  const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
 
   const toggleItem = async (id: string) => {
     const current = items.find((item) => item.id === id);
@@ -86,11 +89,11 @@ export function ShoppingScreen({ navigation }: any) {
       </View>
 
       <Card>
-        <SectionTitle title="예산 대비" action={listResource.loading ? '불러오는 중' : `${budgetPercent}%`} />
+        <SectionTitle title={`${budgetPeriodLabel} 예산 대비`} action={listResource.loading ? '불러오는 중' : `${budgetPercent}%`} />
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${Math.min(budgetPercent, 100)}%` }]} />
         </View>
-        <Text style={styles.muted}>월 예산 {formatWon(budget)} 중 {formatWon(total)} 예정</Text>
+        <Text style={styles.muted}>{budgetPeriodLabel} 예산 {formatWon(budget)} 중 {formatWon(total)} 예정</Text>
       </Card>
 
       {listResource.error ? (
@@ -105,30 +108,51 @@ export function ShoppingScreen({ navigation }: any) {
       <SectionTitle title="담은 품목" />
       {items.map((item) => (
         <View key={item.id} style={styles.itemRow}>
-          <Pressable style={[styles.checkBox, item.checked && styles.checkBoxOn]} onPress={() => void toggleItem(item.id)}>
-            <Text style={[styles.checkText, item.checked && styles.checkTextOn]}>{item.checked ? '✓' : ''}</Text>
-          </Pressable>
-          <View style={styles.itemMain}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemMeta}>{item.quantity}개 · 예상 {formatWon(item.expectedPrice)}</Text>
+          <View style={styles.itemInfoRow}>
+            <Pressable style={[styles.checkBox, item.checked && styles.checkBoxOn]} onPress={() => void toggleItem(item.id)}>
+              <Text style={[styles.checkText, item.checked && styles.checkTextOn]}>{item.checked ? '✓' : ''}</Text>
+            </Pressable>
+            <View style={styles.itemMain}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemMeta}>{item.quantity}개 · 예상 {formatWon(item.expectedPrice)}</Text>
+            </View>
           </View>
           <View style={styles.rowActions}>
-            <Pressable onPress={() => navigation.navigate('ShoppingEdit', { id: item.id })}>
+            <Pressable
+              style={({ pressed }) => [styles.itemTextAction, pressed && styles.itemActionPressed]}
+              onPress={() => navigateStack(navigation, 'ShoppingEdit', { id: item.id })}
+            >
               <Text style={styles.editText}>수정</Text>
             </Pressable>
-            <Pressable onPress={() => deleteItem(item.id)}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.itemTextAction,
+                pressed && styles.deleteActionPressed,
+              ]}
+              onPress={() => deleteItem(item.id)}
+            >
               <Text style={styles.deleteText}>삭제</Text>
             </Pressable>
           </View>
         </View>
       ))}
 
-      <View style={styles.actions}>
-        <Button label="품목 추가" onPress={() => navigation.navigate('ShoppingEdit')} />
-        <Button label="예산 요약" variant="secondary" onPress={() => navigation.navigate('ShoppingBudget')} />
-        <Button label="구매 완료" variant="secondary" onPress={() => navigation.navigate('ShoppingComplete')} />
-        <Button label="구매 이력" variant="text" onPress={() => navigation.navigate('PurchaseHistory')} />
-      </View>
+      <Card>
+        <SectionTitle title="장보기 작업" action={`${items.filter((item) => item.checked).length}개 체크`} />
+        <Button label="품목 추가" onPress={() => navigateStack(navigation, 'ShoppingEdit')} />
+        <Pressable style={styles.actionRow} onPress={() => navigateStack(navigation, 'ShoppingBudget')}>
+          <Text style={styles.actionRowText}>예산 요약</Text>
+          <Text style={styles.actionRowArrow}>›</Text>
+        </Pressable>
+        <Pressable style={styles.actionRow} onPress={() => navigateStack(navigation, 'ShoppingComplete')}>
+          <Text style={styles.actionRowText}>구매 완료</Text>
+          <Text style={styles.actionRowArrow}>›</Text>
+        </Pressable>
+        <Pressable style={[styles.actionRow, styles.actionRowLast]} onPress={() => navigateStack(navigation, 'PurchaseHistory')}>
+          <Text style={styles.actionRowText}>구매 이력</Text>
+          <Text style={styles.actionRowArrow}>›</Text>
+        </Pressable>
+      </Card>
     </ScreenLayout>
   );
 }
@@ -155,16 +179,19 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
   },
   itemRow: {
-    minHeight: 72,
+    minHeight: 118,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
-    padding: 12,
+    padding: 14,
+    gap: 12,
+    marginBottom: 12,
+  },
+  itemInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 10,
   },
   checkBox: {
     width: 28,
@@ -189,6 +216,7 @@ const styles = StyleSheet.create({
   },
   itemMain: {
     flex: 1,
+    minWidth: 0,
   },
   itemName: {
     color: colors.primary,
@@ -203,18 +231,52 @@ const styles = StyleSheet.create({
   editText: {
     color: colors.info,
     fontSize: typography.caption,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   deleteText: {
     color: colors.danger,
     fontSize: typography.caption,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   rowActions: {
-    gap: 8,
-    alignItems: 'flex-end',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 10,
+    gap: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
-  actions: {
-    gap: 10,
+  itemTextAction: {
+    minHeight: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  itemActionPressed: {
+    opacity: 0.65,
+  },
+  deleteActionPressed: {
+    opacity: 0.65,
+  },
+  actionRow: {
+    minHeight: 48,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  actionRowLast: {
+    borderBottomWidth: 0,
+  },
+  actionRowText: {
+    color: colors.primary,
+    fontSize: typography.body,
+    fontWeight: '800',
+  },
+  actionRowArrow: {
+    color: colors.textMuted,
+    fontSize: 24,
   },
 });

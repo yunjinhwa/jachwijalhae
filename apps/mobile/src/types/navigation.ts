@@ -28,7 +28,7 @@ export type RootStackParamList = {
   Alternatives: { itemId?: string } | undefined;
 
   CompareSelect: undefined;
-  CompareResult: { ids?: string[] } | undefined;
+  CompareResult: { ids?: string[]; itemId?: string } | undefined;
   CompareRegions: { itemId?: string } | undefined;
   CompareStores: { itemId?: string } | undefined;
 

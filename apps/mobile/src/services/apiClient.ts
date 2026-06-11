@@ -1,25 +1,71 @@
 import { NativeModules } from 'react-native';
 
-const FALLBACK_LAN_HOST = '10.210.172.59';
 const API_PORT = 4000;
+const API_PATH = '/v1';
+const WINDOWS_HOTSPOT_HOST = '192.168.137.1';
+
+type SourceCodeModule = {
+  scriptURL?: string;
+  getConstants?: () => {
+    scriptURL?: string;
+  };
+};
 
 function isPrivateHost(host: string) {
   return /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
 }
 
+function getHostFromUrl(url?: string) {
+  if (!url) return undefined;
+
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname;
+  } catch {
+    return url.match(/^[^:]+:\/\/([^:/]+)/)?.[1];
+  }
+}
+
 function getMetroHost() {
-  const sourceCode = NativeModules.SourceCode as { scriptURL?: string } | undefined;
-  const scriptURL = sourceCode?.scriptURL;
-  const host = typeof scriptURL === 'string' ? scriptURL.match(/^[^:]+:\/\/([^:/]+)/)?.[1] : undefined;
+  const sourceCode = NativeModules.SourceCode as SourceCodeModule | undefined;
+  const scriptURL = sourceCode?.scriptURL ?? sourceCode?.getConstants?.().scriptURL;
+  const host = getHostFromUrl(scriptURL);
 
   if (host && isPrivateHost(host)) {
     return host;
   }
 
-  return FALLBACK_LAN_HOST;
+  return undefined;
 }
 
-export const API_BASE_URL = `http://${getMetroHost()}:${API_PORT}/v1`;
+function getWebHost() {
+  const location = (globalThis as { location?: { hostname?: string } }).location;
+  const host = location?.hostname;
+
+  if (host && isPrivateHost(host)) {
+    return host;
+  }
+
+  return undefined;
+}
+
+function toApiBaseUrl(host: string) {
+  return `http://${host}:${API_PORT}${API_PATH}`;
+}
+
+function uniqueHosts(hosts: Array<string | undefined>) {
+  return hosts.filter((host, index): host is string => !!host && hosts.indexOf(host) === index);
+}
+
+export const API_HOST = getMetroHost() ?? getWebHost() ?? 'localhost';
+export const API_BASE_URL = toApiBaseUrl(API_HOST);
+export const API_BASE_URLS = uniqueHosts([
+  API_HOST,
+  WINDOWS_HOTSPOT_HOST,
+  'localhost',
+  '127.0.0.1',
+  '10.0.2.2',
+]).map(toApiBaseUrl);
 export const API_KEY_REQUIRED = '서버 API 키 설정 필요';
 
 export type ApiKeySlotId = 'kamis' | 'foodNutritionDb' | 'consumerProductPrice';

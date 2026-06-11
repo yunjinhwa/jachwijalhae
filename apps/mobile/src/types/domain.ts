@@ -1,4 +1,5 @@
 export type Decision = 'BUY' | 'WAIT' | 'REPLACE' | 'NEUTRAL';
+export type BudgetPeriod = 'weekly' | 'monthly';
 
 export type Category = {
   id: string;
