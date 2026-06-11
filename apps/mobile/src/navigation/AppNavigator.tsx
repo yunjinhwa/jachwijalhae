@@ -20,11 +20,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const tabMeta = {
-  HomeTab: { title: '홈', mark: '홈' },
-  SearchTab: { title: '검색', mark: '찾' },
-  ShoppingTab: { title: '장보기', mark: '장' },
-  AlertsTab: { title: '알림', mark: '알' },
-  MyPageTab: { title: 'MY', mark: '나' },
+  HomeTab: { title: '홈', mark: '홈', testID: 'tab-home' },
+  SearchTab: { title: '검색', mark: '찾', testID: 'tab-search' },
+  ShoppingTab: { title: '장보기', mark: '장', testID: 'tab-shopping' },
+  AlertsTab: { title: '알림', mark: '알', testID: 'tab-alerts' },
+  MyPageTab: { title: 'MY', mark: '나', testID: 'tab-mypage' },
 };
 
 function TabMark({ mark, color, focused }: { mark: string; color: string; focused: boolean }) {
@@ -55,6 +55,7 @@ function MainTabs() {
         return {
           headerShown: false,
           title: meta.title,
+          tabBarButtonTestID: meta.testID,
           tabBarIcon: ({ color, focused }) => <TabMark mark={meta.mark} color={color} focused={focused} />,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,

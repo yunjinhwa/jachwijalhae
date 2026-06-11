@@ -1,0 +1,40 @@
+appId: host.exp.exponent
+---
+- stopApp
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 60000
+
+- tapOn:
+    id: "onboarding-skip-button"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "바로 확인"
+    timeout: 20000
+
+- tapOn:
+    id: "tab-search"
+
+- extendedWaitUntil:
+    visible: "품목 검색"
+    timeout: 15000
+
+- assertVisible: "최근 검색어"
+- tapOn: "계란"
+
+- extendedWaitUntil:
+    visible: "검색 결과"
+    timeout: 15000
+
+- assertVisible: "달걀 15개"
+- tapOn: "달걀 15개"
+
+- extendedWaitUntil:
+    visible: "장바구니 담기"
+    timeout: 15000
+
+- assertVisible: "자세히 보기"
+- assertVisible: "가격 정보"

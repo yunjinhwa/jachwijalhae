@@ -27,8 +27,13 @@ export function OnboardingScreen({ navigation }: any) {
       </Card>
 
       <View style={styles.actions}>
-        <Button label="시작하기" onPress={() => navigation.navigate('Setup')} />
-        <Button label="둘러보기" variant="secondary" onPress={() => navigation.replace('MainTabs')} />
+        <Button label="시작하기" testID="onboarding-start-button" onPress={() => navigation.navigate('Setup')} />
+        <Button
+          label="둘러보기"
+          testID="onboarding-skip-button"
+          variant="secondary"
+          onPress={() => navigation.replace('MainTabs')}
+        />
       </View>
     </ScreenLayout>
   );

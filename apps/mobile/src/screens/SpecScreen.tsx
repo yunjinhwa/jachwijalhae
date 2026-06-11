@@ -665,6 +665,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
             </Card>
             <Button
               label="판매처 가격 비교"
+              testID="compare-submit-button"
               onPress={() => navigation.navigate('CompareResult', { itemId: selectedCompareItemId })}
             />
           </>
@@ -704,7 +705,11 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
               <InfoRow label="가격 차이" value={formatWon(priceGap)} />
               <InfoRow label="추천 판단" value="같은 품목은 최저가 판매처 우선" />
             </Card>
-            <Button label="장보기 추가" onPress={() => navigation.navigate('ShoppingEdit', { id: compareItem.id })} />
+            <Button
+              label="장보기 추가"
+              testID="compare-add-shopping-button"
+              onPress={() => navigation.navigate('ShoppingEdit', { id: compareItem.id })}
+            />
           </>
         );
       }
@@ -999,7 +1004,12 @@ function ShoppingEditForm({
         <TextInput value={memo} onChangeText={setMemo} style={styles.input} placeholder="선택 입력" />
         {listResource.error ? <Text style={styles.errorText}>{listResource.error}</Text> : null}
       </Card>
-      <Button label={saving ? '저장 중' : '저장'} disabled={saving} onPress={() => void handleSave()} />
+      <Button
+        label={saving ? '저장 중' : '저장'}
+        testID="shopping-save-button"
+        disabled={saving}
+        onPress={() => void handleSave()}
+      />
       {existingItem ? (
         <Button label="삭제" variant="secondary" disabled={saving} onPress={handleDelete} />
       ) : null}
@@ -1117,7 +1127,12 @@ function AlertEditForm({
         <Text style={styles.helpText}>푸시 권한이 꺼져도 앱 안에서 알림 이력을 확인할 수 있습니다.</Text>
         {alertsResource.error ? <Text style={styles.errorText}>{alertsResource.error}</Text> : null}
       </Card>
-      <Button label={saving ? '저장 중' : '알림 저장'} disabled={saving} onPress={() => void handleSave()} />
+      <Button
+        label={saving ? '저장 중' : '알림 저장'}
+        testID="alert-save-button"
+        disabled={saving}
+        onPress={() => void handleSave()}
+      />
     </>
   );
 }

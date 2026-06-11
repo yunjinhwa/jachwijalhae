@@ -1,0 +1,48 @@
+appId: host.exp.exponent
+---
+- stopApp
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 60000
+
+- tapOn:
+    id: "onboarding-skip-button"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "바로 확인"
+    timeout: 20000
+
+- tapOn:
+    id: "tab-search"
+
+- extendedWaitUntil:
+    visible: "품목 검색"
+    timeout: 15000
+
+- scrollUntilVisible:
+    element:
+      text: "가격 비교"
+    timeout: 20000
+
+- tapOn: "가격 비교"
+
+- extendedWaitUntil:
+    visible: "가격 비교 선택"
+    timeout: 15000
+
+- assertVisible: "판매처 가격을 비교할 품목"
+- tapOn: "쌀 10kg"
+
+- tapOn:
+    id: "compare-submit-button"
+
+- extendedWaitUntil:
+    visible: "가격 비교 결과"
+    timeout: 15000
+
+- assertVisible: "쌀 10kg 판매처별 가격"
+- assertVisible: "비교 요약"
+- assertVisible: "가장 저렴한 판매처"

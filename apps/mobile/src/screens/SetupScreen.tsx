@@ -182,6 +182,7 @@ export function SetupScreen({ navigation }: any) {
       <DataNotice source="지역/예산/관심 카테고리만 저장합니다." />
       <Button
         label={saving ? '저장 중' : '설정 완료'}
+        testID="setup-submit-button"
         disabled={!isValid || saving}
         onPress={() => void handleSubmit()}
       />

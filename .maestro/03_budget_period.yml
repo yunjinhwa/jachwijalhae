@@ -1,0 +1,40 @@
+appId: host.exp.exponent
+---
+- stopApp
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 60000
+
+- tapOn:
+    id: "onboarding-skip-button"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "바로 확인"
+    timeout: 20000
+
+- tapOn:
+    id: "tab-shopping"
+
+- extendedWaitUntil:
+    visible: "장보기 목록"
+    timeout: 15000
+
+- scrollUntilVisible:
+    element:
+      text: "예산 요약"
+    timeout: 20000
+
+- tapOn: "예산 요약"
+
+- extendedWaitUntil:
+    visible: "예산 요약"
+    timeout: 15000
+
+- assertVisible: "예산 기준"
+- tapOn: "월간"
+- assertVisible: "월간 잔여 예산"
+- tapOn: "주간"
+- assertVisible: "주간 잔여 예산"
