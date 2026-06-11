@@ -1,0 +1,39 @@
+appId: host.exp.exponent
+---
+- stopApp
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 60000
+
+- tapOn:
+    id: "onboarding-skip-button"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "바로 확인"
+    timeout: 20000
+
+- tapOn:
+    id: "tab-alerts"
+
+- extendedWaitUntil:
+    visible: "가격 알림"
+    timeout: 15000
+
+- assertVisible: "알림 요약"
+- assertVisible: "알림 만들기"
+
+- tapOn:
+    id: "alert-create-button"
+
+- extendedWaitUntil:
+    visible: "가격 알림 생성/수정"
+    timeout: 15000
+
+- assertVisible: "품목"
+- assertVisible: "목표가"
+- assertVisible: "조건"
+- assertVisible:
+    id: "alert-save-button"

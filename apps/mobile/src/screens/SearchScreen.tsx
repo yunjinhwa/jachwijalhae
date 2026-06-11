@@ -58,6 +58,7 @@ export function SearchScreen({ navigation }: any) {
     <ScreenLayout title="품목 검색" eyebrow="GET /items/search" description="최근/인기 검색어와 카테고리로 빠르게 찾습니다.">
       <View style={styles.searchBox}>
         <TextInput
+          testID="search-input"
           value={keyword}
           onChangeText={setKeyword}
           placeholder="계란, 라면, 세제"

@@ -1,0 +1,33 @@
+appId: host.exp.exponent
+---
+- stopApp
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 60000
+
+- assertVisible: "생활물가 구매 판단 앱"
+- assertVisible: "시작하기"
+
+- tapOn:
+    id: "onboarding-start-button"
+
+- extendedWaitUntil:
+    visible: "초기 설정"
+    timeout: 20000
+
+- assertVisible: "기준 지역"
+- assertVisible: "장보기 예산 단위"
+- tapOn: "주간"
+
+- scrollUntilVisible:
+    element:
+      text: "설정 완료"
+
+- tapOn:
+    id: "setup-submit-button"
+
+- extendedWaitUntil:
+    visible: "자취잘해"
+    timeout: 20000

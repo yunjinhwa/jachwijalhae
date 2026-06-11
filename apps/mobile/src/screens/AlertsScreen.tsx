@@ -79,8 +79,13 @@ export function AlertsScreen({ navigation }: any) {
       ))}
 
       <View style={styles.actions}>
-        <Button label="알림 만들기" onPress={() => navigateStack(navigation, 'AlertEdit')} />
-        <Button label="알림 이력" variant="secondary" onPress={() => navigateStack(navigation, 'AlertHistory')} />
+        <Button label="알림 만들기" testID="alert-create-button" onPress={() => navigateStack(navigation, 'AlertEdit')} />
+        <Button
+          label="알림 이력"
+          testID="alert-history-button"
+          variant="secondary"
+          onPress={() => navigateStack(navigation, 'AlertHistory')}
+        />
       </View>
 
       <DataNotice updatedAt="2026-05-21 09:00" source="가격 알림은 공공데이터 갱신 후 판단됩니다." />

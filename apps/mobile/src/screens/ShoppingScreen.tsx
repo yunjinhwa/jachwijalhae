@@ -139,7 +139,7 @@ export function ShoppingScreen({ navigation }: any) {
 
       <Card>
         <SectionTitle title="장보기 작업" action={`${items.filter((item) => item.checked).length}개 체크`} />
-        <Button label="품목 추가" onPress={() => navigateStack(navigation, 'ShoppingEdit')} />
+        <Button label="품목 추가" testID="shopping-add-button" onPress={() => navigateStack(navigation, 'ShoppingEdit')} />
         <Pressable style={styles.actionRow} onPress={() => navigateStack(navigation, 'ShoppingBudget')}>
           <Text style={styles.actionRowText}>예산 요약</Text>
           <Text style={styles.actionRowArrow}>›</Text>

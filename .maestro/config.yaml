@@ -1,0 +1,10 @@
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - expo-go-smoke
+    - 01_search_item_detail
+    - 02_shopping_list
+    - 03_budget_period
+    - 04_compare_stores
+    - 05_alerts
+    - 06_mypage_settings
