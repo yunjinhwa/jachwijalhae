@@ -272,6 +272,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.info,
     paddingHorizontal: 18,
+    marginBottom: 10,
   },
   buttonSecondary: {
     backgroundColor: colors.white,
