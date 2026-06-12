@@ -3,8 +3,10 @@ import { ApiKeySlotId, isApiKeyConfigured } from './env.js';
 export const API_BASE_PATH = '/v1';
 
 export const externalApiEndpoints = {
-  foodNutritionDb: 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02',
-  consumerProductPrice: 'https://openapi.price.go.kr/openApiImpl/ProductPriceInfoService',
+  foodNutritionDb: 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02',
+  consumerProductPrice: 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getProductPriceInfoSvc.do',
+  consumerProductInfo: 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getProductInfoSvc.do',
+  consumerStoreInfo: 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getStoreInfoSvc.do',
   kamisProductInfo: 'http://www.kamis.or.kr/service/price/xml.do?action=productInfo',
   kamisRetailDailyProduct: 'http://www.kamis.or.kr/service/price/xml.do?action=periodRetailProductList',
   kamisDailyCounty: 'http://www.kamis.or.kr/service/price/xml.do?action=dailyCountyList',

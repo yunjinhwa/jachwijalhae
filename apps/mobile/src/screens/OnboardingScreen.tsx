@@ -17,11 +17,11 @@ export function OnboardingScreen({ navigation }: any) {
       </View>
 
       <Text style={styles.introText}>
-        자주 사는 식품과 생필품 가격을 지역 기준으로 모아 보고, 예산 안에서 살 품목과 기다릴 품목을 쉽게 고를 수 있게 도와줍니다.
+        자주 사는 식품과 생필품 가격을 지역별로 모아 보고, 예산 안에서 살 품목과 기다릴 품목을 쉽게 고를 수 있게 도와줍니다.
       </Text>
 
       <Card>
-        <Text style={styles.feature}>지역 기준 평균가와 판매처별 가격 비교</Text>
+        <Text style={styles.feature}>지역별 평균가와 판매처별 가격 비교</Text>
         <Text style={styles.feature}>BUY / WAIT / REPLACE 구매 판단</Text>
         <Text style={styles.feature}>예산, 장보기, 가격 알림까지 한 흐름으로 관리</Text>
       </Card>

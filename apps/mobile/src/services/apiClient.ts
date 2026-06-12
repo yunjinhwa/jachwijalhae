@@ -71,8 +71,8 @@ export const API_KEY_REQUIRED = '서버 API 키 설정 필요';
 export type ApiKeySlotId = 'kamis' | 'foodNutritionDb' | 'consumerProductPrice';
 
 export const externalApiEndpoints = {
-  foodNutritionDb: 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02',
-  consumerProductPrice: 'https://openapi.price.go.kr/openApiImpl/ProductPriceInfoService',
+  foodNutritionDb: 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02/getFoodNtrCpntDbInq02',
+  consumerProductPrice: 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getProductPriceInfoSvc.do',
   kamisProductInfo: 'http://www.kamis.or.kr/service/price/xml.do?action=productInfo',
   kamisRetailDailyProduct: 'http://www.kamis.or.kr/service/price/xml.do?action=periodRetailProductList',
   kamisDailyCounty: 'http://www.kamis.or.kr/service/price/xml.do?action=dailyCountyList',
@@ -218,5 +218,5 @@ export function getEndpointStatus(api: string) {
     return '로컬 상태';
   }
 
-  return 'Mock API';
+  return '연결 대기';
 }

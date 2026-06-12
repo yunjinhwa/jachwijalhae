@@ -17,6 +17,18 @@ function buildUrl(base: string, query: Query) {
   return url.toString();
 }
 
+function buildUrlWithRawKey(base: string, keyName: string, keyValue: string, query: Query) {
+  const params = [`${keyName}=${keyValue}`];
+
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value !== 'undefined' && value !== '') {
+      params.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+    }
+  }
+
+  return `${base}?${params.join('&')}`;
+}
+
 export function buildKamisUrl(endpoint: KamisEndpoint, query: Query = {}) {
   return buildUrl(externalApiEndpoints[endpoint], {
     p_cert_key: env.apiKeys.kamis,
@@ -27,16 +39,14 @@ export function buildKamisUrl(endpoint: KamisEndpoint, query: Query = {}) {
 }
 
 export function buildFoodNutritionUrl(query: Query = {}) {
-  return buildUrl(externalApiEndpoints.foodNutritionDb, {
-    serviceKey: env.apiKeys.foodNutritionDb,
+  return buildUrlWithRawKey(externalApiEndpoints.foodNutritionDb, 'serviceKey', env.apiKeys.foodNutritionDb, {
     type: 'json',
     ...query,
   });
 }
 
 export function buildConsumerProductPriceUrl(query: Query = {}) {
-  return buildUrl(externalApiEndpoints.consumerProductPrice, {
-    serviceKey: env.apiKeys.consumerProductPrice,
+  return buildUrlWithRawKey(externalApiEndpoints.consumerProductPrice, 'ServiceKey', env.apiKeys.consumerProductPrice, {
     ...query,
   });
 }

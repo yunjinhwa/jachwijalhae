@@ -23,6 +23,7 @@ export function MyPageScreen({ navigation }: any) {
   const storeCategories = usePreferenceStore((state) => state.categories);
   const resetPreferences = usePreferenceStore((state) => state.resetPreferences);
   const userResource = useApiResource(() => jachwiApi.getUserMe(), []);
+  const dataSourcesResource = useApiResource(() => jachwiApi.getDataSources(), []);
   const preferences = userResource.data?.preferences;
   const region = preferences?.region ?? storeRegion;
   const budget = preferences?.budget ?? storeBudget;
@@ -30,6 +31,9 @@ export function MyPageScreen({ navigation }: any) {
   const categories = preferences?.categories ?? storeCategories;
   const authState = userResource.data?.profile.authState ?? 'GUEST_SYNC';
   const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
+  const sourceNames =
+    dataSourcesResource.data?.apiSources.map((source) => source.name).join(', ') ??
+    'KAMIS, 한국소비자원, 식품영양성분DB';
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '저장된 설정을 초기화하고 처음 화면으로 돌아갈까요?', [
@@ -68,8 +72,14 @@ export function MyPageScreen({ navigation }: any) {
         ))}
       </View>
 
+      <Card>
+        <SectionTitle title="데이터 원천" action={dataSourcesResource.loading ? '확인 중' : `${dataSourcesResource.data?.apiSources.length ?? 3}곳`} />
+        <Text style={styles.sourceText}>{sourceNames}</Text>
+        <Text style={styles.sourceText}>가격 판단은 현재가, 최근 평균가, 최저가, 변동률을 함께 봅니다.</Text>
+      </Card>
+
       <Button label="로그아웃" variant="secondary" onPress={handleLogout} />
-      <DataNotice source="정확한 주소나 실시간 위치는 MVP 범위에서 수집하지 않습니다." />
+      <DataNotice source="KAMIS·한국소비자원·식품영양성분DB" />
     </ScreenLayout>
   );
 }
@@ -101,5 +111,10 @@ const styles = StyleSheet.create({
   },
   sourceStatusRequired: {
     color: colors.danger,
+  },
+  sourceText: {
+    color: colors.textSecondary,
+    fontSize: typography.caption,
+    lineHeight: 19,
   },
 });

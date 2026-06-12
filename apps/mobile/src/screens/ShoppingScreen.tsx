@@ -98,7 +98,7 @@ export function ShoppingScreen({ navigation }: any) {
 
       {listResource.error ? (
         <EmptyState
-          title="장보기 API 연결 실패"
+          title="장보기 연결 실패"
           description={listResource.error}
           actionLabel="다시 불러오기"
           onPress={listResource.reload}
