@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Button, Card, DataNotice, DecisionBadge, EmptyState, InfoRow } from '../components/ui';
+import { Button, Card, DecisionBadge, EmptyState, InfoRow } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { formatWon } from '../utils/format';
@@ -18,7 +18,7 @@ export function ItemDetailScreen({ route, navigation }: any) {
     >
       {itemResource.error ? (
         <EmptyState
-          title="품목 API 연결 실패"
+          title="품목 연결 실패"
           description={itemResource.error}
           actionLabel="다시 불러오기"
           onPress={itemResource.reload}
@@ -35,7 +35,6 @@ export function ItemDetailScreen({ route, navigation }: any) {
           </Card>
           <Button label="구매 판단 보기" onPress={() => navigation.navigate('ItemDecision', { itemId: item.id })} />
           <Button label="가격 추이 보기" variant="secondary" onPress={() => navigation.navigate('PriceTrend', { itemId: item.id })} />
-          <DataNotice updatedAt={item.updatedAt} source={item.source} />
         </>
       ) : null}
     </ScreenLayout>

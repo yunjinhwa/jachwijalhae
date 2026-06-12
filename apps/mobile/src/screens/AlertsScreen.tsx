@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Button, Card, DataNotice, EmptyState, SectionTitle } from '../components/ui';
+import { Button, Card, EmptyState, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { colors, radius, typography } from '../theme/theme';
@@ -55,7 +55,7 @@ export function AlertsScreen({ navigation }: any) {
 
       {alertsResource.error ? (
         <EmptyState
-          title="알림 API 연결 실패"
+          title="알림 연결 실패"
           description={alertsResource.error}
           actionLabel="다시 불러오기"
           onPress={alertsResource.reload}
@@ -67,6 +67,9 @@ export function AlertsScreen({ navigation }: any) {
           <Pressable style={styles.alertMain} onPress={() => navigateStack(navigation, 'AlertEdit', { id: alert.id })}>
             <Text style={styles.alertTitle}>{alert.name}</Text>
             <Text style={styles.alertMeta}>목표가 {formatWon(alert.targetPrice)} 이하</Text>
+            {typeof alert.currentPrice === 'number' ? (
+              <Text style={styles.alertMeta}>현재가 {formatWon(alert.currentPrice)}</Text>
+            ) : null}
             {alert.reached ? <Text style={styles.reached}>목표가 도달</Text> : null}
           </Pressable>
           <Pressable
@@ -87,8 +90,6 @@ export function AlertsScreen({ navigation }: any) {
           onPress={() => navigateStack(navigation, 'AlertHistory')}
         />
       </View>
-
-      <DataNotice updatedAt="2026-05-21 09:00" source="가격 알림은 공공데이터 갱신 후 판단됩니다." />
     </ScreenLayout>
   );
 }

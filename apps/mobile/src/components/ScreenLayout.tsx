@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../theme/theme';
 
@@ -8,6 +8,7 @@ type ScreenLayoutProps = {
   description?: string;
   eyebrow?: string;
   onBack?: () => void;
+  onEndReached?: () => void;
   scroll?: boolean;
   children?: React.ReactNode;
 };
@@ -17,11 +18,29 @@ export function ScreenLayout({
   description,
   eyebrow,
   onBack,
+  onEndReached,
   scroll = true,
   children,
 }: ScreenLayoutProps) {
   const isApiLabel = eyebrow ? /\b(GET|POST|PATCH|PUT|DELETE)\b|\/[a-z]/i.test(eyebrow) : false;
   const isRouteDescription = description?.trim().startsWith('/');
+  const reachedEndRef = useRef(false);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!onEndReached) return;
+
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+
+    if (distanceFromBottom < 96) {
+      if (!reachedEndRef.current) {
+        reachedEndRef.current = true;
+        onEndReached();
+      }
+    } else if (distanceFromBottom > 180) {
+      reachedEndRef.current = false;
+    }
+  };
 
   const content = (
     <View style={styles.content}>
@@ -40,7 +59,12 @@ export function ScreenLayout({
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={80}
+          showsVerticalScrollIndicator={false}
+        >
           {content}
         </ScrollView>
       ) : (

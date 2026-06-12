@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Button, Card, DataNotice, Metric, PriceRow, SectionTitle } from '../components/ui';
+import { Button, Card, Metric, PriceRow, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
@@ -17,16 +17,16 @@ export function HomeScreen({ navigation }: any) {
   const home = useApiResource(() => jachwiApi.getHomeSummary(), []);
   const waitRecommendations = useApiResource(() => jachwiApi.getRecommendations('WAIT'), []);
   const summary = home.data?.summary ?? { downCount: 0, upCount: 0, stableCount: 0 };
-  const buyItems = home.data?.recommendations ?? [];
-  const waitItems = waitRecommendations.data?.itemList ?? [];
+  const buyItems = (home.data?.recommendations ?? []).slice(0, 10);
+  const waitItems = (waitRecommendations.data?.itemList ?? []).slice(0, 10);
   const unreadAlerts = home.data?.alerts.unreadCount ?? 0;
   const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
 
   return (
-    <ScreenLayout
-      title="자취잘해"
-      eyebrow="GET /home/summary"
-      description={`${region} 기준 생활물가 요약`}
+      <ScreenLayout
+        title="자취잘해"
+        eyebrow="GET /home/summary"
+        description={`${region} 생활물가 요약`}
     >
       <Pressable style={styles.searchBox} onPress={() => navigation.navigate('SearchTab')}>
         <Text style={styles.searchText}>계란, 라면, 세제 검색</Text>
@@ -42,7 +42,7 @@ export function HomeScreen({ navigation }: any) {
       ) : null}
 
       <Card>
-        <SectionTitle title="내 장보기 기준" action={`${unreadAlerts}개 알림`} />
+        <SectionTitle title="내 장보기 조건" action={`${unreadAlerts}개 알림`} />
         <View style={styles.profileGrid}>
           <Metric label={`${budgetPeriodLabel} 예산`} value={formatWon(budget)} />
           <Metric label="관심 카테고리" value={`${categories.length}개`} />
@@ -81,7 +81,7 @@ export function HomeScreen({ navigation }: any) {
         </Pressable>
       </Card>
 
-      <SectionTitle title="지금 사기 좋은 품목" action="추천 기준" />
+      <SectionTitle title="지금 사기 좋은 품목" action="추천" />
       {buyItems.map((item) => (
         <PriceRow
           key={item.id}
@@ -106,8 +106,6 @@ export function HomeScreen({ navigation }: any) {
           onPress={() => navigateStack(navigation, 'ItemDecision', { itemId: item.id })}
         />
       ))}
-
-      <DataNotice updatedAt="2026-05-21 09:00" source="한국소비자원/KAMIS" />
     </ScreenLayout>
   );
 }

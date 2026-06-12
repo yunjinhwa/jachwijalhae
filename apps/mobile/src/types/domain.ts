@@ -57,6 +57,7 @@ export type PriceAlert = {
   schedule?: string;
   enabled: boolean;
   reached: boolean;
+  currentPrice?: number;
 };
 
 export type PriceChangeItem = {

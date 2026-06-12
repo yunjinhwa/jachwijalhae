@@ -1,10 +1,10 @@
 import { Decision, priceItems } from '../data/catalog.js';
-import { alternativeItems, getItemOrFirst } from '../data/runtimeStore.js';
+import { alternativeItems } from '../data/runtimeStore.js';
 
-export function searchItems(query?: string, categoryId?: string) {
+export function searchItems(query?: string, categoryId?: string, items = priceItems) {
   const normalized = query?.trim().toLowerCase() ?? '';
 
-  return priceItems.filter((item) => {
+  return items.filter((item) => {
     const matchesQuery =
       !normalized ||
       item.name.toLowerCase().includes(normalized) ||
@@ -15,44 +15,44 @@ export function searchItems(query?: string, categoryId?: string) {
   });
 }
 
-export function getRecommendations(type?: Decision) {
+export function getRecommendations(type?: Decision, items = priceItems) {
   if (!type) {
-    return priceItems;
+    return items;
   }
 
-  return priceItems.filter((item) => item.decision === type);
+  return items.filter((item) => item.decision === type);
 }
 
-export function getHomeSummary() {
+export function getHomeSummary(items = priceItems) {
   return {
     summary: {
-      downCount: priceItems.filter((item) => item.changeRate7d < 0).length,
-      upCount: priceItems.filter((item) => item.changeRate7d > 0).length,
-      stableCount: priceItems.filter((item) => Math.abs(item.changeRate7d) <= 1).length,
+      downCount: items.filter((item) => item.changeRate7d < 0).length,
+      upCount: items.filter((item) => item.changeRate7d > 0).length,
+      stableCount: items.filter((item) => Math.abs(item.changeRate7d) <= 1).length,
     },
-    recommendations: getRecommendations('BUY').slice(0, 3),
+    recommendations: getRecommendations('BUY', items).slice(0, 10),
     alerts: {
       unreadCount: 1,
     },
   };
 }
 
-export function getPriceSummary() {
+export function getPriceSummary(items = priceItems) {
   return {
     period: 'weekly',
-    downTop: priceItems
+    downTop: items
       .filter((item) => item.changeRate7d < 0)
       .sort((a, b) => a.changeRate7d - b.changeRate7d)
       .slice(0, 5),
-    upTop: priceItems
+    upTop: items
       .filter((item) => item.changeRate7d > 0)
       .sort((a, b) => b.changeRate7d - a.changeRate7d)
       .slice(0, 5),
   };
 }
 
-export function getPriceChanges() {
-  return priceItems
+export function getPriceChanges(items = priceItems) {
+  return items
     .map((item) => ({
       itemId: item.id,
       name: item.name,
@@ -63,21 +63,26 @@ export function getPriceChanges() {
     .sort((a, b) => Math.abs(b.changeRate7d) - Math.abs(a.changeRate7d));
 }
 
-export function getCompareResult(ids: string[]) {
-  const items = (ids.length > 0 ? ids : ['item_rice_10', 'item_green_onion']).map((id) =>
-    getItemOrFirst(id),
-  );
-  const sorted = [...items].sort((a, b) => a.avgPrice - b.avgPrice);
+function getItemFrom(items = priceItems, itemId?: string) {
+  return items.find((item) => item.id === itemId) ?? items[0];
+}
+
+export function getCompareResult(ids: string[], sourceItems = priceItems) {
+  const fallbackIds = sourceItems.slice(0, 2).map((item) => item.id);
+  const compareItems = (ids.length > 0 ? ids : fallbackIds)
+    .map((id) => getItemFrom(sourceItems, id))
+    .filter((item): item is (typeof sourceItems)[number] => Boolean(item));
+  const sorted = [...compareItems].sort((a, b) => a.avgPrice - b.avgPrice);
 
   return {
-    items,
-    winner: sorted[0],
-    priceGap: items.length >= 2 ? Math.abs(items[0].avgPrice - items[1].avgPrice) : 0,
+    items: compareItems,
+    winner: sorted[0] ?? compareItems[0],
+    priceGap: compareItems.length >= 2 ? Math.abs(compareItems[0].avgPrice - compareItems[1].avgPrice) : 0,
   };
 }
 
-export function getRegionCompare(itemId?: string) {
-  const item = getItemOrFirst(itemId);
+export function getRegionCompare(itemId?: string, items = priceItems) {
+  const item = getItemFrom(items, itemId);
 
   return {
     item,

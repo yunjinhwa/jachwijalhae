@@ -15,5 +15,9 @@ export const env = {
 };
 
 export function isApiKeyConfigured(slotId: ApiKeySlotId) {
+  if (slotId === 'kamis') {
+    return env.apiKeys.kamis.trim().length > 0 && env.apiKeys.kamisCertId.trim().length > 0;
+  }
+
   return env.apiKeys[slotId].trim().length > 0;
 }

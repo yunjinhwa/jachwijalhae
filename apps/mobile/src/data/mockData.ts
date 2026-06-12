@@ -299,8 +299,8 @@ export const purchaseHistory = [
 ];
 
 export const alertHistory = [
-  { id: 'ah_1', title: '우유 1L 가격 확인', body: '소비자원 CSV 기준 서울우유 흰우유 1L 평균가는 3,120원입니다.', read: false },
-  { id: 'ah_2', title: '대파 1kg 부산 표본', body: 'KAMIS CSV 기준 부산 소매 표본 평균가는 4,650원입니다.', read: true },
+  { id: 'ah_1', title: '우유 1L 가격 확인', body: '서울우유 흰우유 1L 평균가는 3,120원입니다.', read: false },
+  { id: 'ah_2', title: '대파 1kg 부산 표본', body: '부산 소매 표본 평균가는 4,650원입니다.', read: true },
   { id: 'ah_3', title: '세탁세제 상승 주의', body: '7일 변동률이 9.4%입니다.', read: true },
 ];
 

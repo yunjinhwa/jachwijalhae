@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Button, Card, Chip, DataNotice } from '../components/ui';
-import { categories as fallbackCategories } from '../data/mockData';
+import { Button, Card, Chip } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
 import { usePreferenceStore } from '../store/usePreferenceStore';
@@ -46,7 +45,7 @@ export function SetupScreen({ navigation }: any) {
   const [saving, setSaving] = useState(false);
 
   const budget = Number(budgetText.replace(/[^0-9]/g, ''));
-  const categories = categoryResource.data?.categories ?? fallbackCategories;
+  const categories = categoryResource.data?.categories ?? [];
 
   useEffect(() => {
     const preferences = userResource.data?.preferences;
@@ -110,11 +109,11 @@ export function SetupScreen({ navigation }: any) {
   return (
     <ScreenLayout
       title="초기 설정"
-      description="가격 조회와 추천에 사용할 기준을 먼저 정합니다."
+      description="가격 조회와 추천에 사용할 조건을 먼저 정합니다."
       eyebrow="POST /users/preferences"
     >
       <Card>
-        <Text style={styles.label}>기준 지역</Text>
+        <Text style={styles.label}>생활 지역</Text>
         <View style={styles.wrap}>
           {REGION_OPTIONS.map((option) => (
             <Chip
@@ -147,7 +146,7 @@ export function SetupScreen({ navigation }: any) {
           keyboardType="number-pad"
           style={styles.input}
         />
-        <Text style={styles.help}>{budgetPeriod === 'weekly' ? '주간' : '월간'} 기준 금액을 원화 정수로 저장합니다.</Text>
+        <Text style={styles.help}>{budgetPeriod === 'weekly' ? '주간' : '월간'} 금액을 원화 정수로 저장합니다.</Text>
       </Card>
 
       <Card>
@@ -178,8 +177,6 @@ export function SetupScreen({ navigation }: any) {
           ))}
         </View>
       </Card>
-
-      <DataNotice source="지역/예산/관심 카테고리만 저장합니다." />
       <Button
         label={saving ? '저장 중' : '설정 완료'}
         testID="setup-submit-button"
