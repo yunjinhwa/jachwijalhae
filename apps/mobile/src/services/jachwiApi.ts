@@ -239,15 +239,18 @@ export const jachwiApi = {
       return data;
     }),
 
-  searchItems: (params: { q?: string; categoryId?: string }) => {
+  searchItems: (params: { q?: string; categoryId?: string; page?: number; size?: number; interestOnly?: boolean }) => {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
     if (params.categoryId && params.categoryId !== 'all') query.set('categoryId', params.categoryId);
+    if (params.page) query.set('page', String(params.page));
+    if (params.size) query.set('size', String(params.size));
+    if (params.interestOnly) query.set('interestOnly', 'true');
 
     return request<{
       keyword: string;
       items: PriceItem[];
-      pagination: { page: number; size: number; total: number };
+      pagination: { page: number; size: number; total: number; hasNext?: boolean };
     }>(`/items/search?${query.toString()}`).then((data) => {
       cachePriceItems(data.items);
       return data;
@@ -433,13 +436,14 @@ export const jachwiApi = {
 
   getUserMe: () =>
     request<{
-      profile: { id: string; nickname: string; authState: string };
+      profile: { id: string; nickname: string };
       preferences: {
         region: string;
         regionCode: string;
         budget: number;
         budgetPeriod: BudgetPeriod;
         categories: string[];
+        keywords?: string[];
       };
     }>('/users/me'),
 
@@ -449,19 +453,25 @@ export const jachwiApi = {
     budget: number;
     budgetPeriod?: BudgetPeriod;
     categories: string[];
+    keywords?: string[];
   }) =>
     request<typeof payload>('/users/preferences', {
       method: 'POST',
       body: JSON.stringify(payload),
     }, quickWriteRequestOptions),
 
-  getRecommendations: (type?: Decision) => {
+  getRecommendations: (type?: Decision, params: { page?: number; size?: number } = {}) => {
     const query = type ? `?type=${type}` : '';
+    const searchParams = new URLSearchParams(query ? query.slice(1) : '');
+    if (params.page) searchParams.set('page', String(params.page));
+    if (params.size) searchParams.set('size', String(params.size));
+    const queryString = searchParams.toString();
 
     return request<{
       decisionType: Decision | 'ALL';
       itemList: PriceItem[];
-    }>(`/recommendations${query}`).then((data) => {
+      pagination?: { page: number; size: number; total: number; hasNext?: boolean };
+    }>(`/recommendations${queryString ? `?${queryString}` : ''}`).then((data) => {
       cachePriceItems(data.itemList);
       return data;
     });

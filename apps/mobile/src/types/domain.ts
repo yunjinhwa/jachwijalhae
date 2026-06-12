@@ -69,8 +69,12 @@ export type PriceChangeItem = {
 };
 
 export type AlternativeItem = {
+  itemId: string;
+  fromItemId?: string;
   from: string;
   to: string;
+  categoryName?: string;
+  avgPrice?: number;
   priceGap: number;
   savingRate: number;
 };

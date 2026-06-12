@@ -7,6 +7,7 @@ type PreferenceState = {
   budget: number;
   budgetPeriod: BudgetPeriod;
   categories: string[];
+  keywords: string[];
   isSetupCompleted: boolean;
   setPreferences: (payload: {
     region: string;
@@ -14,6 +15,7 @@ type PreferenceState = {
     budget: number;
     budgetPeriod?: BudgetPeriod;
     categories: string[];
+    keywords?: string[];
   }) => void;
   setBudgetPeriod: (budgetPeriod: BudgetPeriod) => void;
   resetPreferences: () => void;
@@ -24,20 +26,22 @@ const defaultPreferences = {
   regionCode: '26440',
   budget: 320000,
   budgetPeriod: 'monthly' as BudgetPeriod,
-  categories: ['식품', '농산물', '생필품'],
+  categories: ['농산물', '축산물', '생활용품'],
+  keywords: ['계란', '쌀', '라면'],
 };
 
 export const usePreferenceStore = create<PreferenceState>((set) => ({
   ...defaultPreferences,
   isSetupCompleted: false,
 
-  setPreferences: ({ region, regionCode = '26440', budget, budgetPeriod, categories }) =>
+  setPreferences: ({ region, regionCode = '26440', budget, budgetPeriod, categories, keywords = [] }) =>
     set((state) => ({
       region,
       regionCode,
       budget,
       budgetPeriod: budgetPeriod ?? state.budgetPeriod,
       categories,
+      keywords,
       isSetupCompleted: true,
     })),
 

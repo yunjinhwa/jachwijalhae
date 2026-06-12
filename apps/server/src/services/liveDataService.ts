@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT_MS = 15000;
 const NUTRITION_REQUEST_TIMEOUT_MS = 4000;
 const DEFAULT_KAMIS_COUNTY_CODE = '1101';
 const CONSUMER_FALLBACK_INSPECT_DAY = '20241220';
-const CONSUMER_AUTO_STORE_LIMIT = Number(process.env.CONSUMER_STORE_LIMIT ?? 50);
+const CONSUMER_AUTO_STORE_LIMIT = Number(process.env.CONSUMER_STORE_LIMIT ?? 120);
 const CONSUMER_PRICE_BATCH_SIZE = Number(process.env.CONSUMER_PRICE_BATCH_SIZE ?? 8);
 
 type CacheState = {
@@ -773,11 +773,19 @@ async function fetchConsumerRows(day: string, entpId: string) {
   const xml = await fetchText(getConsumerPriceUrl(day, entpId));
   const parsed = xmlParser.parse(xml) as {
     response?: {
+      resultCode?: string | number;
+      resultMsg?: string;
       result?: {
         'iros.openapi.service.vo.goodPriceVO'?: ConsumerPriceRow | ConsumerPriceRow[];
       };
     };
   };
+  const resultCode = asText(parsed.response?.resultCode);
+  const resultMsg = asText(parsed.response?.resultMsg);
+
+  if (resultCode && resultCode !== '00') {
+    throw new Error(resultMsg ? `Consumer product price API ${resultCode}: ${resultMsg}` : `Consumer product price API ${resultCode}`);
+  }
 
   return toArray(parsed.response?.result?.['iros.openapi.service.vo.goodPriceVO']);
 }
@@ -793,6 +801,11 @@ async function fetchConsumerRowsForStores(day: string, storeIds: string[]) {
         rows: await fetchConsumerRows(day, entpId),
       })),
     );
+    const failures = settled.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+
+    if (failures.length === settled.length && failures.length > 0) {
+      throw failures[0].reason;
+    }
 
     rows.push(
       ...settled

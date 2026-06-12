@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { categories, Decision } from '../data/catalog.js';
+import { categories, type Decision } from '../data/catalog.js';
 import { sourceCsvFiles } from '../data/fileDataSeeds.js';
 import {
   alertHistory,
@@ -7,6 +7,7 @@ import {
   purchaseHistory,
   shoppingItems,
   userPreference,
+  type PriceAlert,
 } from '../data/runtimeStore.js';
 import { getDataSourcesForResponse } from '../config/externalApis.js';
 import {
@@ -20,9 +21,12 @@ import {
   searchItems,
 } from '../services/priceService.js';
 import { getLiveDataDiagnostics, getLiveNutrition, getLivePriceItems } from '../services/liveDataService.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendNotFound, sendOk } from '../utils/response.js';
 
 export const v1Router = Router();
+
+type LivePriceItem = Awaited<ReturnType<typeof getLivePriceItems>>[number];
 
 function parseDecision(type: unknown): Decision | undefined {
   return type === 'BUY' || type === 'WAIT' || type === 'REPLACE' || type === 'NEUTRAL'
@@ -30,7 +34,30 @@ function parseDecision(type: unknown): Decision | undefined {
     : undefined;
 }
 
-function isAlertReached(alert: (typeof priceAlerts)[number], item: Awaited<ReturnType<typeof getLivePriceItems>>[number] | undefined) {
+function parseAlertCondition(condition: unknown): PriceAlert['condition'] {
+  return condition === 'WEEKLY_DROP' || condition === 'NEW_LOW' || condition === 'BELOW_TARGET'
+    ? condition
+    : 'BELOW_TARGET';
+}
+
+function parsePositiveNumber(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseNonNegativeNumber(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parsePositiveInteger(value: unknown, fallback: number, max: number) {
+  const parsed = Math.floor(Number(value));
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+
+  return Math.min(parsed, max);
+}
+
+function isAlertReached(alert: PriceAlert, item: LivePriceItem | undefined) {
   if (!alert.enabled || !item) return false;
 
   if (alert.condition === 'WEEKLY_DROP') {
@@ -44,7 +71,7 @@ function isAlertReached(alert: (typeof priceAlerts)[number], item: Awaited<Retur
   return item.avgPrice <= alert.targetPrice;
 }
 
-function toAlertResponse(alert: (typeof priceAlerts)[number], items: Awaited<ReturnType<typeof getLivePriceItems>>) {
+function toAlertResponse(alert: PriceAlert, items: LivePriceItem[]) {
   const item = items.find((entry) => entry.id === alert.itemId);
   const reached = isAlertReached(alert, item);
   alert.reached = reached;
@@ -63,14 +90,32 @@ v1Router.get('/health', (req, res) => {
   sendOk(req, res, { status: 'ok' });
 });
 
+v1Router.get('/ready', asyncHandler(async (req, res) => {
+  const items = await getLivePriceItems();
+
+  sendOk(req, res, {
+    status: 'ready',
+    itemCount: items.length,
+    diagnostics: getLiveDataDiagnostics(),
+  });
+}));
+
 v1Router.post('/users/preferences', (req, res) => {
-  const { region, regionCode, budget, budgetPeriod, categories: selectedCategories } = req.body ?? {};
+  const {
+    region,
+    regionCode,
+    budget,
+    budgetPeriod,
+    categories: selectedCategories,
+    keywords: selectedKeywords,
+  } = req.body ?? {};
 
   if (typeof region === 'string') userPreference.region = region;
   if (typeof regionCode === 'string') userPreference.regionCode = regionCode;
-  if (typeof budget === 'number') userPreference.budget = budget;
+  if (typeof budget === 'number' && Number.isFinite(budget) && budget >= 0) userPreference.budget = budget;
   if (budgetPeriod === 'weekly' || budgetPeriod === 'monthly') userPreference.budgetPeriod = budgetPeriod;
   if (Array.isArray(selectedCategories)) userPreference.categories = selectedCategories;
+  if (Array.isArray(selectedKeywords)) userPreference.keywords = selectedKeywords;
 
   sendOk(req, res, userPreference);
 });
@@ -80,7 +125,6 @@ v1Router.get('/users/me', (req, res) => {
     profile: {
       id: 'guest_device',
       nickname: '자취러',
-      authState: 'ANONYMOUS_SYNC',
     },
     preferences: userPreference,
   });
@@ -94,39 +138,49 @@ v1Router.get('/data-sources', (req, res) => {
   });
 });
 
-v1Router.get('/home/summary', async (req, res) => {
+v1Router.get('/home/summary', asyncHandler(async (req, res) => {
   const items = await getLivePriceItems();
-  sendOk(req, res, getHomeSummary(items));
-});
+  sendOk(req, res, getHomeSummary(items, userPreference));
+}));
 
-v1Router.get('/prices/summary', async (req, res) => {
+v1Router.get('/prices/summary', asyncHandler(async (req, res) => {
   const items = await getLivePriceItems();
   sendOk(req, res, getPriceSummary(items));
-});
+}));
 
-v1Router.get('/prices/changes', async (req, res) => {
+v1Router.get('/prices/changes', asyncHandler(async (req, res) => {
   const items = await getLivePriceItems();
   sendOk(req, res, {
     period: req.query.period ?? 'weekly',
     items: getPriceChanges(items),
   });
-});
+}));
 
-v1Router.get('/recommendations', async (req, res) => {
+v1Router.get('/recommendations', asyncHandler(async (req, res) => {
   const decision = parseDecision(req.query.type);
+  const page = parsePositiveInteger(req.query.page, 1, 1000);
+  const size = parsePositiveInteger(req.query.size, 30, 100);
   const items = await getLivePriceItems();
+  const recommendedItems = getRecommendations(decision, items, userPreference);
+  const start = (page - 1) * size;
 
   sendOk(req, res, {
     decisionType: decision ?? 'ALL',
-    itemList: getRecommendations(decision, items),
+    itemList: recommendedItems.slice(start, start + size),
+    pagination: {
+      page,
+      size,
+      total: recommendedItems.length,
+      hasNext: start + size < recommendedItems.length,
+    },
   });
-});
+}));
 
 v1Router.get('/categories', (req, res) => {
   sendOk(req, res, { categories });
 });
 
-v1Router.get('/categories/:categoryId/items', async (req, res) => {
+v1Router.get('/categories/:categoryId/items', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const items = sourceItems.filter((item) => item.categoryId === req.params.categoryId);
 
@@ -134,26 +188,32 @@ v1Router.get('/categories/:categoryId/items', async (req, res) => {
     categoryId: req.params.categoryId,
     items,
   });
-});
+}));
 
-v1Router.get('/items/search', async (req, res) => {
+v1Router.get('/items/search', asyncHandler(async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q : undefined;
   const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId : undefined;
+  const interestOnly = req.query.interestOnly === 'true';
+  const page = parsePositiveInteger(req.query.page, 1, 1000);
+  const size = parsePositiveInteger(req.query.size, 30, 200);
   const sourceItems = await getLivePriceItems();
-  const items = searchItems(q, categoryId, sourceItems);
+  const matchedItems = searchItems(q, categoryId, sourceItems, userPreference, interestOnly);
+  const start = (page - 1) * size;
+  const items = matchedItems.slice(start, start + size);
 
   sendOk(req, res, {
     keyword: q ?? '',
     items,
     pagination: {
-      page: Number(req.query.page ?? 1),
-      size: Number(req.query.size ?? 20),
-      total: items.length,
+      page,
+      size,
+      total: matchedItems.length,
+      hasNext: start + size < matchedItems.length,
     },
   });
-});
+}));
 
-v1Router.get('/items/:itemId/detail', async (req, res) => {
+v1Router.get('/items/:itemId/detail', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -162,9 +222,9 @@ v1Router.get('/items/:itemId/detail', async (req, res) => {
     ...item,
     primaryCta: item.decision === 'WAIT' ? 'CREATE_ALERT' : 'ADD_SHOPPING_LIST',
   });
-});
+}));
 
-v1Router.get('/items/:itemId/basic', async (req, res) => {
+v1Router.get('/items/:itemId/basic', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -181,9 +241,9 @@ v1Router.get('/items/:itemId/basic', async (req, res) => {
     nutrition,
     source: item.source,
   });
-});
+}));
 
-v1Router.get('/items/:itemId/prices', async (req, res) => {
+v1Router.get('/items/:itemId/prices', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -195,9 +255,9 @@ v1Router.get('/items/:itemId/prices', async (req, res) => {
     stores: item.sellers,
     region: userPreference.region,
   });
-});
+}));
 
-v1Router.get('/items/:itemId/trend', async (req, res) => {
+v1Router.get('/items/:itemId/trend', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -211,9 +271,9 @@ v1Router.get('/items/:itemId/trend', async (req, res) => {
     changeRate7d: item.changeRate7d,
     changeRate30d: item.changeRate30d,
   });
-});
+}));
 
-v1Router.get('/items/:itemId/sellers', async (req, res) => {
+v1Router.get('/items/:itemId/sellers', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -221,9 +281,9 @@ v1Router.get('/items/:itemId/sellers', async (req, res) => {
   sendOk(req, res, {
     sellerPrices: item.sellers,
   });
-});
+}));
 
-v1Router.get('/items/:itemId/decision', async (req, res) => {
+v1Router.get('/items/:itemId/decision', asyncHandler(async (req, res) => {
   const sourceItems = await getLivePriceItems();
   const item = sourceItems.find((entry) => entry.id === req.params.itemId);
   if (!item) return sendNotFound(res, '품목을 찾을 수 없습니다.');
@@ -237,35 +297,39 @@ v1Router.get('/items/:itemId/decision', async (req, res) => {
       { label: '최저가', value: item.minPrice },
     ],
   });
-});
+}));
 
-v1Router.get('/items/:itemId/alternatives', (req, res) => {
+v1Router.get('/items/:itemId/alternatives', asyncHandler(async (req, res) => {
+  const sourceItems = await getLivePriceItems();
+  const itemId = Array.isArray(req.params.itemId) ? req.params.itemId[0] : req.params.itemId;
+
   sendOk(req, res, {
-    alternatives: getAlternatives(),
+    alternatives: getAlternatives(itemId, sourceItems),
   });
-});
+}));
 
-v1Router.get('/compare/items', async (req, res) => {
+v1Router.get('/compare/items', asyncHandler(async (req, res) => {
   const ids = typeof req.query.ids === 'string' ? req.query.ids.split(',') : [];
   const items = await getLivePriceItems();
   sendOk(req, res, getCompareResult(ids, items));
-});
+}));
 
-v1Router.get('/compare/regions', async (req, res) => {
+v1Router.get('/compare/regions', asyncHandler(async (req, res) => {
   const itemId = typeof req.query.itemId === 'string' ? req.query.itemId : undefined;
   const items = await getLivePriceItems();
   sendOk(req, res, getRegionCompare(itemId, items));
-});
+}));
 
-v1Router.get('/compare/stores', async (req, res) => {
+v1Router.get('/compare/stores', asyncHandler(async (req, res) => {
   const items = await getLivePriceItems();
   const item = items.find((entry) => entry.id === req.query.itemId) ?? items[0];
+  if (!item) return sendNotFound(res, '비교할 품목을 찾을 수 없습니다.');
 
   sendOk(req, res, {
     item,
     stores: item.sellers,
   });
-});
+}));
 
 v1Router.get('/shopping-list', (req, res) => {
   const total = shoppingItems.reduce((sum, item) => sum + item.expectedPrice * item.quantity, 0);
@@ -279,12 +343,14 @@ v1Router.get('/shopping-list', (req, res) => {
 
 v1Router.post('/shopping-list/items', (req, res) => {
   const body = req.body ?? {};
+  const quantity = parsePositiveNumber(body.quantity, 1);
+  const expectedPrice = parseNonNegativeNumber(body.expectedPrice, 0);
   const item = {
     id: `shop_${Date.now()}`,
     itemId: typeof body.itemId === 'string' ? body.itemId : undefined,
-    name: typeof body.name === 'string' ? body.name : '직접 추가 품목',
-    quantity: Number(body.quantity ?? 1),
-    expectedPrice: Number(body.expectedPrice ?? 0),
+    name: typeof body.name === 'string' && body.name.trim().length > 0 ? body.name.trim() : '직접 추가 품목',
+    quantity,
+    expectedPrice,
     memo: typeof body.memo === 'string' ? body.memo : undefined,
     checked: false,
   };
@@ -297,7 +363,14 @@ v1Router.patch('/shopping-list/items/:id', (req, res) => {
   const item = shoppingItems.find((entry) => entry.id === req.params.id);
   if (!item) return sendNotFound(res, '장보기 품목을 찾을 수 없습니다.');
 
-  Object.assign(item, req.body);
+  const body = req.body ?? {};
+  if (typeof body.itemId === 'string') item.itemId = body.itemId;
+  if (typeof body.name === 'string' && body.name.trim().length > 0) item.name = body.name.trim();
+  if (typeof body.memo === 'string') item.memo = body.memo;
+  if (typeof body.checked === 'boolean') item.checked = body.checked;
+  if (body.quantity !== undefined) item.quantity = parsePositiveNumber(body.quantity, item.quantity);
+  if (body.expectedPrice !== undefined) item.expectedPrice = parseNonNegativeNumber(body.expectedPrice, item.expectedPrice);
+
   sendOk(req, res, item);
 });
 
@@ -337,11 +410,11 @@ v1Router.post('/purchases', (req, res) => {
 v1Router.get('/purchases/history', (req, res) => {
   sendOk(req, res, {
     history: purchaseHistory,
-    month: req.query.month ?? '2026-05',
+    month: req.query.month ?? new Date().toISOString().slice(0, 7),
   });
 });
 
-v1Router.get('/alerts', async (req, res) => {
+v1Router.get('/alerts', asyncHandler(async (req, res) => {
   const items = await getLivePriceItems();
   const alerts = priceAlerts.map((alert) => toAlertResponse(alert, items));
 
@@ -349,21 +422,21 @@ v1Router.get('/alerts', async (req, res) => {
     alerts,
     onOff: alerts.some((alert) => alert.enabled),
   });
-});
+}));
 
-v1Router.post('/alerts', async (req, res) => {
+v1Router.post('/alerts', asyncHandler(async (req, res) => {
   const body = req.body ?? {};
   const items = await getLivePriceItems();
   const item = items.find((entry) => entry.id === body.itemId);
   if (!item) return sendNotFound(res, '알림을 만들 품목을 찾을 수 없습니다.');
 
-  const alert = {
+  const alert: PriceAlert = {
     id: `alert_${Date.now()}`,
     itemId: item.id,
     name: item.name,
-    targetPrice: Number(body.targetPrice ?? item.avgPrice),
-    condition: body.condition ?? 'BELOW_TARGET',
-    schedule: body.schedule ?? 'DAILY_09',
+    targetPrice: parsePositiveNumber(body.targetPrice, item.avgPrice),
+    condition: parseAlertCondition(body.condition),
+    schedule: typeof body.schedule === 'string' ? body.schedule : 'DAILY_09',
     enabled: true,
     reached: false,
   };
@@ -371,22 +444,28 @@ v1Router.post('/alerts', async (req, res) => {
 
   priceAlerts.push(alert);
   sendOk(req, res, toAlertResponse(alert, items));
-});
+}));
 
-v1Router.patch('/alerts/:id', async (req, res) => {
+v1Router.patch('/alerts/:id', asyncHandler(async (req, res) => {
   const alert = priceAlerts.find((entry) => entry.id === req.params.id);
   if (!alert) return sendNotFound(res, '알림을 찾을 수 없습니다.');
 
-  if (typeof req.body?.itemId === 'string') {
-    const items = await getLivePriceItems();
-    const item = items.find((entry) => entry.id === req.body.itemId);
+  const body = req.body ?? {};
+  const items = await getLivePriceItems();
+  if (typeof body.itemId === 'string') {
+    const item = items.find((entry) => entry.id === body.itemId);
     if (!item) return sendNotFound(res, '알림을 만들 품목을 찾을 수 없습니다.');
+    alert.itemId = item.id;
+    alert.name = item.name;
   }
 
-  Object.assign(alert, req.body);
-  const items = await getLivePriceItems();
+  if (body.targetPrice !== undefined) alert.targetPrice = parsePositiveNumber(body.targetPrice, alert.targetPrice);
+  if (body.condition !== undefined) alert.condition = parseAlertCondition(body.condition);
+  if (typeof body.schedule === 'string') alert.schedule = body.schedule;
+  if (typeof body.enabled === 'boolean') alert.enabled = body.enabled;
+
   sendOk(req, res, toAlertResponse(alert, items));
-});
+}));
 
 v1Router.delete('/alerts/:id', (req, res) => {
   const index = priceAlerts.findIndex((entry) => entry.id === req.params.id);

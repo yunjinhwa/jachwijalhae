@@ -14,6 +14,7 @@ export function HomeScreen({ navigation }: any) {
   const budget = usePreferenceStore((state) => state.budget);
   const budgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const categories = usePreferenceStore((state) => state.categories);
+  const keywords = usePreferenceStore((state) => state.keywords);
   const home = useApiResource(() => jachwiApi.getHomeSummary(), []);
   const waitRecommendations = useApiResource(() => jachwiApi.getRecommendations('WAIT'), []);
   const summary = home.data?.summary ?? { downCount: 0, upCount: 0, stableCount: 0 };
@@ -45,9 +46,9 @@ export function HomeScreen({ navigation }: any) {
         <SectionTitle title="내 장보기 조건" action={`${unreadAlerts}개 알림`} />
         <View style={styles.profileGrid}>
           <Metric label={`${budgetPeriodLabel} 예산`} value={formatWon(budget)} />
-          <Metric label="관심 카테고리" value={`${categories.length}개`} />
+          <Metric label="관심 조건" value={`${categories.length + keywords.length}개`} />
         </View>
-        <Text style={styles.muted}>{categories.join(', ')}</Text>
+        <Text style={styles.muted}>{[...categories, ...keywords].join(', ')}</Text>
       </Card>
 
       <View style={styles.metricRow}>

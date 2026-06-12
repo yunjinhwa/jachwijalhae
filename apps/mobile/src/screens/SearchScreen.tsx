@@ -1,42 +1,111 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Button, Card, Chip, EmptyState, PriceRow, SectionTitle } from '../components/ui';
 import { useApiResource } from '../hooks/useApiResource';
 import { jachwiApi } from '../services/jachwiApi';
+import { usePreferenceStore } from '../store/usePreferenceStore';
 import { colors, radius, typography } from '../theme/theme';
+import type { PriceItem } from '../types/domain';
 import { navigateStack } from '../utils/navigation';
 
 const RECENT_KEYWORDS = ['계란', '라면', '화장지', '우유'];
 const POPULAR_KEYWORDS = ['쌀', '대파', '세탁세제', '참치캔', '우유'];
+const SEARCH_PAGE_SIZE = 30;
 
 export function SearchScreen({ navigation }: any) {
+  const preferredCategories = usePreferenceStore((state) => state.categories);
+  const preferredKeywords = usePreferenceStore((state) => state.keywords);
   const [keyword, setKeyword] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [visibleCount, setVisibleCount] = useState(15);
+  const [resultItems, setResultItems] = useState<PriceItem[]>([]);
+  const [pagination, setPagination] = useState({ page: 1, size: SEARCH_PAGE_SIZE, total: 0, hasNext: false });
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [resultError, setResultError] = useState<string | null>(null);
 
   const trimmedKeyword = keyword.trim().toLowerCase();
+  const preferenceKey = `${preferredCategories.join('|')}::${preferredKeywords.join('|')}`;
+  const shouldFetchResults =
+    trimmedKeyword.length > 0 ||
+    selectedCategory !== 'all' ||
+    preferredCategories.length > 0 ||
+    preferredKeywords.length > 0;
+  const recentKeywords = useMemo(
+    () => Array.from(new Set([...preferredKeywords, ...RECENT_KEYWORDS])).slice(0, 8),
+    [preferredKeywords],
+  );
+  const popularKeywords = useMemo(
+    () => Array.from(new Set([...POPULAR_KEYWORDS, ...preferredCategories])).slice(0, 8),
+    [preferredCategories],
+  );
   const categoryResource = useApiResource(() => jachwiApi.getCategories(), []);
-  const resultResource = useApiResource(
-    () =>
-      trimmedKeyword
-        ? jachwiApi.searchItems({ q: trimmedKeyword, categoryId: selectedCategory })
-        : Promise.resolve({
-            keyword: '',
-            items: [],
-            pagination: { page: 1, size: 20, total: 0 },
-          }),
-    [trimmedKeyword, selectedCategory],
+
+  const loadSearchPage = useCallback(
+    async (page: number) => {
+      if (!shouldFetchResults) return;
+
+      const append = page > 1;
+      setResultError(null);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoadingResults(true);
+      }
+
+      try {
+        const data = await jachwiApi.searchItems({
+          q: trimmedKeyword || undefined,
+          categoryId: selectedCategory,
+          interestOnly: !trimmedKeyword,
+          page,
+          size: SEARCH_PAGE_SIZE,
+        });
+
+        setPagination({
+          page: data.pagination.page,
+          size: data.pagination.size,
+          total: data.pagination.total,
+          hasNext: Boolean(data.pagination.hasNext),
+        });
+        setResultItems((prev) => {
+          if (!append) return data.items;
+
+          const seenIds = new Set(prev.map((item) => item.id));
+          return [...prev, ...data.items.filter((item) => !seenIds.has(item.id))];
+        });
+      } catch (error) {
+        setResultError(error instanceof Error ? error.message : '검색 결과를 불러오지 못했습니다.');
+      } finally {
+        setLoadingResults(false);
+        setLoadingMore(false);
+      }
+    },
+    [shouldFetchResults, trimmedKeyword, selectedCategory, preferenceKey],
   );
 
+  useEffect(() => {
+    setVisibleCount(15);
+    setResultItems([]);
+    setPagination({ page: 1, size: SEARCH_PAGE_SIZE, total: 0, hasNext: false });
+    setResultError(null);
+
+    if (shouldFetchResults) {
+      void loadSearchPage(1);
+    }
+  }, [loadSearchPage, shouldFetchResults]);
+
   const categories = categoryResource.data?.categories ?? [];
-  const filteredItems = resultResource.data?.items ?? [];
+  const filteredItems = resultItems;
   const visibleItems = filteredItems.slice(0, visibleCount);
-  const canLoadMore = visibleCount < filteredItems.length;
+  const canRevealMore = visibleCount < filteredItems.length;
+  const canFetchMore = pagination.hasNext && !loadingResults && !loadingMore;
 
   const hasKeyword = trimmedKeyword.length > 0;
-  const isLoadingResults = hasKeyword && resultResource.loading && !resultResource.data;
-  const isEmpty = hasKeyword && !isLoadingResults && !resultResource.error && filteredItems.length === 0;
+  const hasInterestQuery = !hasKeyword && filteredItems.length > 0;
+  const isLoadingResults = shouldFetchResults && loadingResults && filteredItems.length === 0;
+  const isEmpty = shouldFetchResults && !isLoadingResults && !resultError && filteredItems.length === 0;
 
   useEffect(() => {
     setVisibleCount(15);
@@ -48,8 +117,13 @@ export function SearchScreen({ navigation }: any) {
       eyebrow="GET /items/search"
       description="최근/인기 검색어와 카테고리로 빠르게 찾습니다."
       onEndReached={() => {
-        if (hasKeyword && canLoadMore) {
+        if (canRevealMore) {
           setVisibleCount((count) => Math.min(count + 15, filteredItems.length));
+          return;
+        }
+
+        if ((hasKeyword || hasInterestQuery || selectedCategory !== 'all') && canFetchMore) {
+          void loadSearchPage(pagination.page + 1);
         }
       }}
     >
@@ -86,7 +160,7 @@ export function SearchScreen({ navigation }: any) {
           <Card>
             <SectionTitle title="최근 검색어" />
             <View style={styles.keywordWrap}>
-              {RECENT_KEYWORDS.map((item) => (
+              {recentKeywords.map((item) => (
                 <Chip key={item} label={item} onPress={() => setKeyword(item)} />
               ))}
             </View>
@@ -95,7 +169,7 @@ export function SearchScreen({ navigation }: any) {
           <Card>
             <SectionTitle title="많이 찾는 품목" />
             <View style={styles.keywordWrap}>
-              {POPULAR_KEYWORDS.map((item) => (
+              {popularKeywords.map((item) => (
                 <Chip key={item} label={item} onPress={() => setKeyword(item)} />
               ))}
             </View>
@@ -105,6 +179,23 @@ export function SearchScreen({ navigation }: any) {
             <Button label="카테고리 보기" variant="secondary" onPress={() => navigateStack(navigation, 'Categories')} />
             <Button label="가격 비교" variant="secondary" onPress={() => navigateStack(navigation, 'CompareSelect')} />
           </View>
+
+          {hasInterestQuery ? (
+            <>
+              <SectionTitle title="내 관심 품목" action={`${visibleItems.length}/${pagination.total}개`} />
+              {visibleItems.map((item) => (
+                <PriceRow
+                  key={item.id}
+                  name={item.name}
+                  meta={`${item.categoryName} · ${item.unit}`}
+                  price={item.avgPrice}
+                  changeRate={item.changeRate7d}
+                  decision={item.decision}
+                  onPress={() => navigateStack(navigation, 'ItemDetail', { itemId: item.id })}
+                />
+              ))}
+            </>
+          ) : null}
         </>
       ) : null}
 
@@ -115,9 +206,9 @@ export function SearchScreen({ navigation }: any) {
         </Card>
       ) : null}
 
-      {hasKeyword && !isLoadingResults && !resultResource.error && !isEmpty ? (
+      {(hasKeyword || selectedCategory !== 'all') && !isLoadingResults && !resultError && !isEmpty ? (
         <>
-          <SectionTitle title="검색 결과" action={resultResource.loading ? '검색 중' : `${visibleItems.length}/${filteredItems.length}개`} />
+          <SectionTitle title="검색 결과" action={loadingMore ? '추가 로딩 중' : `${visibleItems.length}/${pagination.total}개`} />
           {visibleItems.map((item) => (
             <PriceRow
               key={item.id}
@@ -129,7 +220,7 @@ export function SearchScreen({ navigation }: any) {
               onPress={() => navigateStack(navigation, 'ItemDetail', { itemId: item.id })}
             />
           ))}
-          {canLoadMore ? <Text style={styles.loadingText}>아래로 더 내려가면 15개씩 더 보여줍니다.</Text> : null}
+          {canRevealMore || canFetchMore ? <Text style={styles.loadingText}>아래로 더 내려가면 품목을 더 불러옵니다.</Text> : null}
           <Button label="필터/정렬" variant="secondary" onPress={() => navigateStack(navigation, 'ItemFilter')} />
         </>
       ) : null}
@@ -143,12 +234,12 @@ export function SearchScreen({ navigation }: any) {
         />
       ) : null}
 
-      {resultResource.error ? (
+      {resultError ? (
         <EmptyState
           title="검색 연결 실패"
-          description={resultResource.error}
+          description={resultError}
           actionLabel="다시 시도"
-          onPress={resultResource.reload}
+          onPress={() => void loadSearchPage(1)}
         />
       ) : null}
     </ScreenLayout>
