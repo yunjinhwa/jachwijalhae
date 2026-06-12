@@ -21,6 +21,7 @@ export function MyPageScreen({ navigation }: any) {
   const storeBudget = usePreferenceStore((state) => state.budget);
   const storeBudgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const storeCategories = usePreferenceStore((state) => state.categories);
+  const storeKeywords = usePreferenceStore((state) => state.keywords);
   const resetPreferences = usePreferenceStore((state) => state.resetPreferences);
   const userResource = useApiResource(() => jachwiApi.getUserMe(), []);
   const dataSourcesResource = useApiResource(() => jachwiApi.getDataSources(), []);
@@ -29,7 +30,7 @@ export function MyPageScreen({ navigation }: any) {
   const budget = preferences?.budget ?? storeBudget;
   const budgetPeriod = preferences?.budgetPeriod ?? storeBudgetPeriod;
   const categories = preferences?.categories ?? storeCategories;
-  const authState = userResource.data?.profile.authState ?? 'GUEST_SYNC';
+  const keywords = preferences?.keywords ?? storeKeywords;
   const budgetPeriodLabel = budgetPeriod === 'weekly' ? '주간' : '월간';
   const sourceNames =
     dataSourcesResource.data?.apiSources.map((source) => source.name).join(', ') ??
@@ -56,10 +57,11 @@ export function MyPageScreen({ navigation }: any) {
   return (
     <ScreenLayout title="마이페이지" eyebrow="GET /users/me" description="익명 사용자도 장보기와 알림을 저장할 수 있습니다.">
       <Card>
-        <SectionTitle title="내 정보" action={userResource.loading ? '불러오는 중' : authState} />
+        <SectionTitle title="내 정보" action={userResource.loading ? '불러오는 중' : undefined} />
         <InfoRow label="기준 지역" value={region} />
         <InfoRow label={`${budgetPeriodLabel} 예산`} value={formatWon(budget)} />
-        <InfoRow label="관심 카테고리" value={categories.join(', ')} />
+        <InfoRow label="관심 카테고리" value={categories.length > 0 ? categories.join(', ') : '없음'} />
+        <InfoRow label="관심 키워드" value={keywords.length > 0 ? keywords.join(', ') : '없음'} />
         {userResource.error ? <Text style={styles.sourceStatusRequired}>{userResource.error}</Text> : null}
       </Card>
 

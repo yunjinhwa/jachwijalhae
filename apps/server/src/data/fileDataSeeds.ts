@@ -2,7 +2,7 @@ export const sourceCsvFiles = [
   {
     id: 'kamis_daily_wholesale_retail_20240930',
     name: '한국농수산식품유통공사_농축수산물 일자별 도소매 가격_20240930.csv',
-    path: 'c:\\메타버스_포폴\\자취잘해_프로젝트\\데이터_파일\\한국농수산식품유통공사_농축수산물 일자별 도소매 가격_20240930.csv',
+    path: '데이터_파일/한국농수산식품유통공사_농축수산물 일자별 도소매 가격_20240930.csv',
     encoding: 'CP949',
     rowCount: 990281,
     latestDate: '2024-09-30',
@@ -23,7 +23,7 @@ export const sourceCsvFiles = [
   {
     id: 'consumer_product_price_stats_20241220',
     name: '한국소비자원_생필품 가격 정보 상품별 통계_20241220.csv',
-    path: 'c:\\메타버스_포폴\\자취잘해_프로젝트\\데이터_파일\\한국소비자원_생필품 가격 정보 상품별 통계_20241220.csv',
+    path: '데이터_파일/한국소비자원_생필품 가격 정보 상품별 통계_20241220.csv',
     encoding: 'CP949',
     rowCount: 42067,
     latestDate: '2024-12-20',

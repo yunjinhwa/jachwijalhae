@@ -145,6 +145,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
         : decisionFilter === 'ALL'
           ? undefined
           : decisionFilter;
+  const currentMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
   const priceSummaryResource = useApiResource(() =>
     spec.kind === 'priceSummary' ? jachwiApi.getPriceSummary() : Promise.resolve(null),
@@ -164,7 +165,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
   );
   const searchResource = useApiResource(() =>
     spec.kind === 'searchResults' || spec.kind === 'compareSelect' || spec.kind === 'recentItems'
-      ? jachwiApi.searchItems({ q: routeKeyword })
+      ? jachwiApi.searchItems({ q: routeKeyword, size: 100 })
       : Promise.resolve(null),
     [spec.kind, routeKeyword],
   );
@@ -197,7 +198,9 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
     [spec.kind, activeItemId],
   );
   const recommendationsResource = useApiResource(() =>
-    recommendationBackedKinds.has(spec.kind) ? jachwiApi.getRecommendations(recommendationType) : Promise.resolve(null),
+    recommendationBackedKinds.has(spec.kind)
+      ? jachwiApi.getRecommendations(recommendationType, { size: 100 })
+      : Promise.resolve(null),
     [spec.kind, recommendationType],
   );
   const compareRegionsResource = useApiResource(() =>
@@ -219,8 +222,8 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
     [spec.kind],
   );
   const purchaseHistoryResource = useApiResource(() =>
-    spec.kind === 'purchaseHistory' ? jachwiApi.getPurchaseHistory('2026-05') : Promise.resolve(null),
-    [spec.kind],
+    spec.kind === 'purchaseHistory' ? jachwiApi.getPurchaseHistory(currentMonth) : Promise.resolve(null),
+    [spec.kind, currentMonth],
   );
   const alertHistoryResource = useApiResource(() =>
     spec.kind === 'alertHistory' ? jachwiApi.getAlertHistory() : Promise.resolve(null),
@@ -392,7 +395,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
       case 'recentItems':
         return (
           <>
-            {searchItems.slice(0, 5).map((entry) => (
+            {searchItems.slice(0, 20).map((entry) => (
               <PriceRow
                 key={entry.id}
                 name={entry.name}
@@ -413,7 +416,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
         return (
           <>
             <ChipRow options={sortOptions} selected={sortOption} onSelect={setSortOption} />
-            {sortPriceItemList(searchItems, sortOption).slice(0, 6).map((entry) => (
+            {sortPriceItemList(searchItems, sortOption).map((entry) => (
               <PriceRow
                 key={entry.id}
                 name={entry.name}
@@ -635,19 +638,29 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
       case 'waitDecision':
         return <DecisionList decision="WAIT" navigation={navigation} items={recommendationsResource.data?.itemList} />;
 
-      case 'alternatives':
+      case 'alternatives': {
+        const alternativeItems = alternativesResource.data?.alternatives ?? [];
+
         return (
           <>
-            {(alternativesResource.data?.alternatives ?? []).map((entry) => (
-              <Card key={`${entry.from}-${entry.to}`}>
+            {alternativeItems.map((entry) => (
+              <Card key={entry.itemId}>
                 <SectionTitle title={entry.to} action={`${entry.savingRate}% 절감`} />
                 <InfoRow label="비교 품목" value={entry.from} />
+                {entry.avgPrice ? <InfoRow label="대체 품목 평균가" value={formatWon(entry.avgPrice)} /> : null}
                 <InfoRow label="예상 차액" value={formatWon(entry.priceGap)} />
-                <Button label="상세 보기" variant="secondary" onPress={() => navigation.navigate('ItemDetail', { itemId: 'item_tuna' })} />
+                <Button label="상세 보기" variant="secondary" onPress={() => navigation.navigate('ItemDetail', { itemId: entry.itemId })} />
               </Card>
             ))}
+            {alternativeItems.length === 0 ? (
+              <EmptyState
+                title="적절한 대체 품목이 없습니다"
+                description="이 품목과 이름이나 키워드가 비슷하면서 더 저렴한 품목을 찾지 못했습니다."
+              />
+            ) : null}
           </>
         );
+      }
 
       case 'compareSelect':
         const activeSelectedCompareItemId = selectedCompareItemId || searchItems[0]?.id;
@@ -656,7 +669,7 @@ export function SpecScreen({ navigation, route, spec }: SpecScreenProps) {
           <>
             <Card>
               <SectionTitle title="판매처 가격을 비교할 품목" action={selectedCompareItem?.name ?? '품목 선택'} />
-              {searchItems.slice(0, 5).map((entry) => {
+              {searchItems.slice(0, 30).map((entry) => {
                 const selected = activeSelectedCompareItemId === entry.id;
 
                 return (
@@ -1035,7 +1048,7 @@ function AlertEditForm({
     [isAlertItem, routeId],
   );
   const existingAlert = alertsResource.data?.alerts.find((entry) => entry.id === routeId);
-  const itemOptionsResource = useApiResource(() => jachwiApi.searchItems({}), []);
+  const itemOptionsResource = useApiResource(() => jachwiApi.searchItems({ size: 100 }), []);
   const itemOptions = itemOptionsResource.data?.items ?? [];
   const [selectedItemId, setSelectedItemId] = useState(item.id);
   const selectedItem =
@@ -1132,7 +1145,7 @@ function AlertEditForm({
       <Card>
         <Text style={styles.label}>품목</Text>
         <View style={styles.wrap}>
-          {itemOptions.slice(0, 8).map((entry) => (
+          {itemOptions.slice(0, 30).map((entry) => (
             <Chip
               key={entry.id}
               label={entry.name}

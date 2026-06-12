@@ -12,8 +12,8 @@ export function OnboardingScreen({ navigation }: any) {
       description="내 지역 생활물가를 보고, 지금 살지 기다릴지 빠르게 판단하세요."
     >
       <View style={styles.heroPanel}>
-        <Text style={styles.heroNumber}>BUY</Text>
-        <Text style={styles.heroText}>평균가보다 낮은 품목은 장보기 목록으로 바로 담습니다.</Text>
+        <Text style={styles.heroNumber}>살까?</Text>
+        <Text style={styles.heroText}>평균가와 최근 흐름을 보고 지금 살 품목과 기다릴 품목을 나눠 보여줍니다.</Text>
       </View>
 
       <Text style={styles.introText}>
@@ -22,7 +22,7 @@ export function OnboardingScreen({ navigation }: any) {
 
       <Card>
         <Text style={styles.feature}>지역별 평균가와 판매처별 가격 비교</Text>
-        <Text style={styles.feature}>BUY / WAIT / REPLACE 구매 판단</Text>
+        <Text style={styles.feature}>지금 살 품목과 기다릴 품목을 쉬운 말로 안내</Text>
         <Text style={styles.feature}>예산, 장보기, 가격 알림까지 한 흐름으로 관리</Text>
       </Card>
 

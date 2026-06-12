@@ -10,8 +10,19 @@ import type { BudgetPeriod } from '../types/domain';
 
 const REGION_OPTIONS = [
   { label: '부산 사상구', code: '26440' },
+  { label: '부산 수영구', code: '26500' },
+  { label: '부산 해운대구', code: '26350' },
   { label: '서울 마포구', code: '11440' },
+  { label: '서울 관악구', code: '11620' },
+  { label: '서울 송파구', code: '11710' },
   { label: '대전 서구', code: '30170' },
+  { label: '대구 수성구', code: '27260' },
+  { label: '광주 북구', code: '29170' },
+  { label: '인천 부평구', code: '28237' },
+  { label: '경기 수원시', code: '41110' },
+  { label: '경기 고양시', code: '41280' },
+  { label: '강원 춘천시', code: '42110' },
+  { label: '제주 제주시', code: '50110' },
 ];
 const KEYWORD_OPTIONS = ['계란', '쌀', '우유', '라면', '세제', '참치캔', '화장지', '대파'];
 const BUDGET_PERIOD_OPTIONS: Array<{ label: string; value: BudgetPeriod }> = [
@@ -25,22 +36,19 @@ export function SetupScreen({ navigation }: any) {
   const storeBudget = usePreferenceStore((state) => state.budget);
   const storeBudgetPeriod = usePreferenceStore((state) => state.budgetPeriod);
   const storeCategories = usePreferenceStore((state) => state.categories);
+  const storeKeywords = usePreferenceStore((state) => state.keywords);
   const setPreferences = usePreferenceStore((state) => state.setPreferences);
   const categoryResource = useApiResource(() => jachwiApi.getCategories(), []);
   const userResource = useApiResource(() => jachwiApi.getUserMe(), []);
-  const [region, setRegion] = useState(
-    REGION_OPTIONS.find((option) => option.code === storeRegionCode) ?? {
-      label: storeRegion,
-      code: storeRegionCode,
-    },
-  );
+  const [regionLabel, setRegionLabel] = useState(storeRegion);
+  const [regionCode, setRegionCode] = useState(storeRegionCode);
   const [budgetText, setBudgetText] = useState(String(storeBudget));
   const [budgetPeriod, setBudgetPeriod] = useState<BudgetPeriod>(storeBudgetPeriod);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     storeCategories.filter((item) => !KEYWORD_OPTIONS.includes(item)),
   );
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>(
-    storeCategories.filter((item) => KEYWORD_OPTIONS.includes(item)),
+    storeKeywords.length > 0 ? storeKeywords : storeCategories.filter((item) => KEYWORD_OPTIONS.includes(item)),
   );
   const [saving, setSaving] = useState(false);
 
@@ -51,22 +59,26 @@ export function SetupScreen({ navigation }: any) {
     const preferences = userResource.data?.preferences;
     if (!preferences) return;
 
-    setRegion(
-      REGION_OPTIONS.find((option) => option.code === preferences.regionCode) ?? {
-        label: preferences.region,
-        code: preferences.regionCode,
-      },
-    );
+    const migratedKeywords = preferences.keywords ?? preferences.categories.filter((item) => KEYWORD_OPTIONS.includes(item));
+
+    setRegionLabel(preferences.region);
+    setRegionCode(preferences.regionCode);
     setBudgetText(String(preferences.budget));
     setBudgetPeriod(preferences.budgetPeriod ?? 'monthly');
     setSelectedCategories(preferences.categories.filter((item) => !KEYWORD_OPTIONS.includes(item)));
-    setSelectedKeywords(preferences.categories.filter((item) => KEYWORD_OPTIONS.includes(item)));
+    setSelectedKeywords(migratedKeywords);
   }, [userResource.data]);
 
   const isValid = useMemo(
-    () => region.label.length > 0 && budget > 0 && (selectedCategories.length > 0 || selectedKeywords.length > 0),
-    [region, budget, selectedCategories, selectedKeywords],
+    () => regionLabel.trim().length > 0 && budget > 0 && (selectedCategories.length > 0 || selectedKeywords.length > 0),
+    [regionLabel, budget, selectedCategories, selectedKeywords],
   );
+
+  const handleRegionTextChange = (value: string) => {
+    const matchedRegion = REGION_OPTIONS.find((option) => option.label === value.trim());
+    setRegionLabel(value);
+    setRegionCode(matchedRegion?.code ?? 'custom');
+  };
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -82,16 +94,17 @@ export function SetupScreen({ navigation }: any) {
 
   const handleSubmit = async () => {
     if (!isValid) {
-      Alert.alert('입력 확인', '지역, 예산, 관심 카테고리를 모두 입력해 주세요.');
+      Alert.alert('입력 확인', '지역, 예산, 관심 카테고리나 키워드를 입력해 주세요.');
       return;
     }
 
     const payload = {
-      region: region.label,
-      regionCode: region.code,
+      region: regionLabel.trim(),
+      regionCode,
       budget,
       budgetPeriod,
-      categories: [...selectedCategories, ...selectedKeywords],
+      categories: selectedCategories,
+      keywords: selectedKeywords,
     };
 
     try {
@@ -114,13 +127,23 @@ export function SetupScreen({ navigation }: any) {
     >
       <Card>
         <Text style={styles.label}>생활 지역</Text>
+        <TextInput
+          value={regionLabel}
+          onChangeText={handleRegionTextChange}
+          placeholder="예: 부산 수영구, 서울 관악구"
+          style={styles.input}
+        />
+        <Text style={styles.help}>직접 입력하거나 가까운 지역을 선택하세요.</Text>
         <View style={styles.wrap}>
           {REGION_OPTIONS.map((option) => (
             <Chip
               key={option.code}
               label={option.label}
-              selected={region.code === option.code}
-              onPress={() => setRegion(option)}
+              selected={regionCode === option.code}
+              onPress={() => {
+                setRegionLabel(option.label);
+                setRegionCode(option.code);
+              }}
             />
           ))}
         </View>
